@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SKTI Tubig — tests</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font: 15px/1.5 ui-monospace, "Cascadia Code", Consolas, monospace;
+    margin: 0; padding: 24px; max-width: 820px;
+    background: #0B1A20; color: #E8F4F8;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: #A2BAC3; margin: 0 0 20px; }
+  #summary { padding: 12px 16px; border-radius: 10px; font-weight: 700; margin-bottom: 20px; }
+  .pass { background: #10331F; color: #4ADE80; border: 1px solid #4ADE80; }
+  .fail { background: #3A1414; color: #F87171; border: 1px solid #F87171; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em;
+       color: #A2BAC3; margin: 20px 0 6px; border-bottom: 1px solid #27454F; padding-bottom: 4px; }
+  li { list-style: none; padding: 3px 0; }
+  .ok::before  { content: "PASS  "; color: #4ADE80; }
+  .bad::before { content: "FAIL  "; color: #F87171; }
+  .bad { color: #F87171; }
+  .msg { color: #FBBF24; padding-left: 6ch; font-size: 13px; }
+  ul { margin: 0; padding: 0; }
+</style>
+</head>
+<body>
+  <h1>SKTI Tubig — tests</h1>
+  <p class="sub">IDWG and scale calibration, bands, fluid, schedule, backup,
+     and the iCalendar / Google Calendar output.
+     Your real data is snapshotted and restored around the run.</p>
+  <div id="summary">running…</div>
+  <div id="out"></div>
+
+<script type="module">
+import { results, resetResults } from './harness.js';
+import { runMathTests } from './math.test.js';
+import { runCalendarTests } from './calendar.test.js';
+
+resetResults();
+runMathTests();
+runCalendarTests();
+
+const failed = results.filter(r => !r.ok);
+
+const summary = document.getElementById('summary');
+summary.className = failed.length ? 'fail' : 'pass';
+summary.textContent = failed.length
+  ? `${failed.length} of ${results.length} failed`
+  : `all ${results.length} passed`;
+
+const out = document.getElementById('out');
+let seen = null, ul = null;
+for (const r of results) {
+  if (r.suite !== seen) {
+    seen = r.suite;
+    const h = document.createElement('h2');
+    h.textContent = seen;
+    out.append(h);
+    ul = document.createElement('ul');
+    out.append(ul);
+  }
+  const li = document.createElement('li');
+  li.className = r.ok ? 'ok' : 'bad';
+  li.textContent = r.name;
+  ul.append(li);
+  if (!r.ok) {
+    const m = document.createElement('li');
+    m.className = 'msg';
+    m.textContent = r.msg;
+    ul.append(m);
+  }
+}
+
+window.__testResults = { total: results.length, failed: failed.length, failures: failed };
+</script>
+</body>
+</html>

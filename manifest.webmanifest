@@ -1,0 +1,32 @@
+{
+  "name": "SKTI Tubig — Fluid & Weight Tracker",
+  "short_name": "SKTI Tubig",
+  "description": "Fluid and weight tracker for haemodialysis patients. Works offline. All data stays on the phone.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F2F7F9",
+  "theme_color": "#155E75",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["health", "medical", "lifestyle"],
+  "icons": [
+    {
+      "src": "assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    { "name": "Timbang / Weight", "url": "./index.html#weight" },
+    { "name": "Tubig / Fluid",    "url": "./index.html#fluid"  }
+  ]
+}
