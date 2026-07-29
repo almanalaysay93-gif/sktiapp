@@ -5,7 +5,7 @@
    Bump CACHE on every release or patients keep the old shell.
    =================================================================== */
 
-const CACHE = 'skti-tubig-v16';
+const CACHE = 'skti-tubig-v17';
 
 const SHELL = [
   './',
@@ -16,7 +16,9 @@ const SHELL = [
   './js/i18n.js',
   './js/calendar.js',
   './manifest.webmanifest',
-  './assets/icon.svg'
+  './assets/icon.svg',
+  './assets/logo.png',
+  './assets/skti-building.jpg'
 ];
 
 self.addEventListener('install', e => {

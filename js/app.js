@@ -929,6 +929,12 @@ function viewSettings() {
       </span>
     </div>
 
+    <figure class="figure">
+      <img src="assets/skti-building.jpg" alt="SKTI building, Southern Philippines Medical Center, Davao City"
+           onerror="this.closest('.figure').hidden=true">
+      <figcaption>SKTI — SPMC Kidney and Transplant Institute, Davao City</figcaption>
+    </figure>
+
     <h2 class="section-title">${esc(t('settings.language'))}</h2>
     <div class="seg" role="group" aria-label="${esc(t('settings.language'))}">
       ${LANGS.map(c => `

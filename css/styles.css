@@ -1,46 +1,67 @@
 /* ===================================================================
    SKTI Fluid & Weight Tracker — design tokens + components
-   Style: "Accessible & Ethical" (WCAG AA/AAA target)
+   Palette/type/shape ported from the "Organic" design system (warm
+   cream + terracotta, Caprasimo/Figtree) used in the SKTI Patient
+   Dashboard reference. Token NAMES are unchanged from the previous
+   clinical-teal pass — every view/component below still targets the
+   same custom properties, so only this block and the two font/shadow
+   declarations further down needed to move.
+   Organic ships light-only; the dark block is an original extension
+   (same hue families, lifted lightness) so the accessibility work
+   already verified in both themes — WCAG AA, 56px targets — carries
+   over rather than regressing to light-only.
    Base font 18px: users skew elderly.
    =================================================================== */
 
-/* ---------- Tokens: light ---------- */
+/* ---------- Tokens: light (Organic, direct) ---------- */
 :root {
-  /* Brand — clinical teal. Renal / water association, reads as hospital. */
-  --brand:        #0E7490;  /* 5.37:1 on white */
-  --brand-dark:   #155E75;  /* 7.29:1 on white */
-  --brand-tint:   #E0F5FA;
-  --brand-tint-2: #CFFAFE;
+  /* Brand — Organic's terracotta accent, stepped to accent-600/700 for
+     on-brand contrast rather than the design system's base accent-500. */
+  --brand:        #B2622D;  /* accent-600 */
+  --brand-dark:   #8C491A;  /* accent-700, hover/active */
+  --brand-tint:   #FFF2EB;  /* accent-100 */
+  --brand-tint-2: #FFE1D0;  /* accent-200 */
   --on-brand:     #FFFFFF;
 
-  /* Surfaces */
-  --bg:         #F2F7F9;
-  --surface:    #FFFFFF;
-  --surface-2:  #EAF2F5;
-  --fg:         #0F2A33;  /* 14.9:1 on --surface */
-  --fg-muted:   #4A6670;  /* 6.1:1  on --surface */
-  --border:     #C9DCE3;          /* hairline separators only */
-  --border-strong: #6E8F9B;       /* component boundaries — 3.47:1 on white (WCAG 1.4.11) */
+  /* Surfaces — cards recede a shade deeper than the page (Organic's own
+     elevation direction: --color-surface is darker than --color-bg). */
+  --bg:         #F5EAD8;
+  --surface:    #EBDDC5;
+  --surface-2:  #F9F4ED;   /* lifted chip tone — segmented controls, hover */
+  --fg:         #201E1D;
+  --fg-muted:   #645C50;   /* Organic's neutral-700 — solid, not color-mix:
+                              getComputedStyle resolves color-mix() to a
+                              color(srgb …) function form that broke the
+                              alpha-composited contrast check; a solid
+                              value from the system's own tonal ramp is
+                              both simpler and more faithful to it. */
+  --border:     color-mix(in srgb, #201E1D 16%, transparent);  /* hairline only, no contrast floor */
+  --border-strong: #82796A;   /* neutral-600 — component boundaries, WCAG 1.4.11 */
 
-  /* Semantic status — every one is paired with an icon + word in the UI.
+  /* Semantic status — SKTI-specific, distinct from the terracotta accent
+     hue so a status is never confused with a brand action. --warn is
+     stepped darker than the reference's #B8862E, which read 2.4:1 on
+     --surface — nowhere near AA.
      Never color alone (ux rule: color-not-only). */
-  --ok:        #15803D;
-  --ok-tint:   #DCFCE7;
-  --warn:      #B45309;
-  --warn-tint: #FEF3C7;
-  --danger:    #B91C1C;
-  --danger-tint: #FEE2E2;
+  --ok:        #3E6B40;
+  --ok-tint:   #E6EFE2;
+  --warn:      #8C6018;
+  --warn-tint: #F7ECD3;
+  --danger:    #963527;
+  --danger-tint: #F6E2DC;
 
   /* Shape + motion */
   --radius:    16px;
-  --radius-sm: 10px;
-  --radius-lg: 24px;
-  --shadow:    0 1px 2px rgba(15,42,51,.06), 0 4px 12px rgba(15,42,51,.07);
-  --shadow-lg: 0 2px 6px rgba(15,42,51,.08), 0 12px 28px rgba(15,42,51,.12);
+  --radius-sm: 8px;
+  --radius-lg: 28px;
+  --shadow:    0 1px 2px color-mix(in srgb, #2E2B25 14%, transparent);
+  --shadow-lg: 0 12px 32px color-mix(in srgb, #2E2B25 22%, transparent);
   --dur:       200ms;
   --ease-out:  cubic-bezier(.2,.8,.3,1);
 
-  /* Type scale — base is 18px, one step up from the usual 16px. */
+  /* Type scale — base is 18px, one step up from the usual 16px. Kept at
+     this scale (not Organic's 15px default): the larger elderly-tuned
+     scale is a harder constraint than the reference's own body size. */
   --t-xs:  0.833rem;   /* 15px  — captions only */
   --t-sm:  0.944rem;   /* 17px */
   --t-md:  1rem;       /* 18px  — body */
@@ -49,7 +70,8 @@
   --t-2xl: 2rem;       /* 36px */
   --t-hero:3.111rem;   /* 56px  — the one number that matters */
 
-  /* Spacing — 4/8 rhythm */
+  /* Spacing — 4/8 rhythm, kept at the elderly-tuned scale (not Organic's
+     denser 4.4px rhythm, which is tuned to its own smaller type). */
   --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
   --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px;
 
@@ -60,39 +82,41 @@
   --shell-max: 480px;
 }
 
-/* ---------- Tokens: dark ---------- */
+/* ---------- Tokens: dark (original extension — Organic ships light-only) ---------- */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --brand:        #38BEDC;  /* lifted + desaturated, not inverted */
-    --brand-dark:   #7DD9EE;
-    --brand-tint:   #123540;
-    --brand-tint-2: #17414E;
-    --on-brand:     #04222B;
+    --brand:        #F6A06B;  /* accent-400, lifted + desaturated, not inverted */
+    --brand-dark:   #FFC6A5;  /* accent-300, hover/active */
+    --brand-tint:   #3D2E22;
+    --brand-tint-2: #4A3628;
+    --on-brand:     #2E1608;
 
-    --bg:         #0B1A20;
-    --surface:    #12262E;
-    --surface-2:  #19323C;
-    --fg:         #E8F4F8;  /* 13.4:1 on --surface */
-    --fg-muted:   #A2BAC3;  /* 6.9:1  on --surface */
-    --border:     #27454F;
-    --border-strong: #5A8593;  /* 3.88:1 on --surface */
+    --bg:         #211E19;
+    --surface:    #362F26;   /* cards lift lighter than the page in dark mode */
+    --surface-2:  #423A2F;
+    --fg:         #F3ECE0;
+    --fg-muted:   #C8BFAE;   /* solid, not color-mix — see the light-mode note */
+    --border:     color-mix(in srgb, #F3ECE0 18%, transparent);  /* hairline only, no contrast floor */
+    --border-strong: #8C8171;
 
-    --ok:        #4ADE80;  --ok-tint:     #10331F;
-    --warn:      #FBBF24;  --warn-tint:   #3A2A08;
-    --danger:    #F87171;  --danger-tint: #3A1414;
+    --ok:        #8FC290;  --ok-tint:     #1F2E1F;
+    --warn:      #E0AC5C;  --warn-tint:   #332510;
+    --danger:    #E2897A;  --danger-tint: #34201B;
 
     --shadow:    0 1px 2px rgba(0,0,0,.4), 0 4px 12px rgba(0,0,0,.35);
     --shadow-lg: 0 2px 6px rgba(0,0,0,.45), 0 12px 28px rgba(0,0,0,.5);
   }
 }
 :root[data-theme="dark"] {
-  --brand: #38BEDC; --brand-dark: #7DD9EE; --brand-tint: #123540;
-  --brand-tint-2: #17414E; --on-brand: #04222B;
-  --bg: #0B1A20; --surface: #12262E; --surface-2: #19323C;
-  --fg: #E8F4F8; --fg-muted: #A2BAC3; --border: #27454F; --border-strong: #5A8593;
-  --ok: #4ADE80; --ok-tint: #10331F;
-  --warn: #FBBF24; --warn-tint: #3A2A08;
-  --danger: #F87171; --danger-tint: #3A1414;
+  --brand: #F6A06B; --brand-dark: #FFC6A5; --brand-tint: #3D2E22;
+  --brand-tint-2: #4A3628; --on-brand: #2E1608;
+  --bg: #211E19; --surface: #362F26; --surface-2: #423A2F;
+  --fg: #F3ECE0; --fg-muted: #C8BFAE;
+  --border: color-mix(in srgb, #F3ECE0 18%, transparent);
+  --border-strong: #8C8171;
+  --ok: #8FC290; --ok-tint: #1F2E1F;
+  --warn: #E0AC5C; --warn-tint: #332510;
+  --danger: #E2897A; --danger-tint: #34201B;
   --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 12px rgba(0,0,0,.35);
   --shadow-lg: 0 2px 6px rgba(0,0,0,.45), 0 12px 28px rgba(0,0,0,.5);
 }
@@ -105,8 +129,8 @@ body {
   font-size: var(--t-md);
   line-height: 1.55;
   /* System stack first so the app still reads correctly with no network.
-     Figtree/Noto Sans are a progressive enhancement — see index.html. */
-  font-family: "Noto Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+     Figtree is a progressive enhancement — see index.html. */
+  font-family: Figtree, -apple-system, BlinkMacSystemFont, "Segoe UI",
                Roboto, "Helvetica Neue", Arial, sans-serif;
   color: var(--fg);
   background: var(--bg);
@@ -114,9 +138,12 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 h1, h2, h3 {
-  font-family: Figtree, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-weight: 700;
-  line-height: 1.25;
+  /* Caprasimo is a rounded display face with no close system match, so
+     the fallback is a plain sans rather than a pretend-lookalike. */
+  font-family: Caprasimo, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: -.01em;
   margin: 0;
 }
 button, input, select { font: inherit; color: inherit; }
@@ -202,6 +229,18 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
 .brand__name { font-size: var(--t-lg); font-weight: 700; }
 .brand__sub  { font-size: var(--t-xs); color: var(--fg-muted); }
 
+/* Licensed SKTI building photo — Settings only, not a persistent header
+   (the app deliberately has no header; see .gearbar above). */
+.figure {
+  margin: 0 0 var(--s-5); border-radius: var(--radius-lg); overflow: hidden;
+  box-shadow: var(--shadow); border: 1px solid var(--border);
+}
+.figure img { width: 100%; display: block; max-height: 180px; object-fit: cover; }
+.figure figcaption {
+  padding: var(--s-2) var(--s-4); background: var(--surface);
+  font-size: var(--t-xs); color: var(--fg-muted); text-align: center;
+}
+
 /* ---------- Main ---------- */
 .main {
   flex: 1;
@@ -263,9 +302,9 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
 .status--empty  .status__badge { color: var(--fg-muted); }
 
 .status__num {
-  font-family: Figtree, sans-serif;
-  font-size: var(--t-hero); font-weight: 700; line-height: 1;
-  letter-spacing: -.03em;
+  font-family: Caprasimo, sans-serif;
+  font-size: var(--t-hero); font-weight: 400; line-height: 1;
+  letter-spacing: -.01em;
   display: block;
 }
 .status__unit { font-size: var(--t-lg); font-weight: 600; opacity: .8; }
@@ -352,8 +391,8 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
   border-radius: var(--radius); padding: var(--s-4); text-align: center;
 }
 .stat__val {
-  font-family: Figtree, sans-serif; font-size: var(--t-2xl);
-  font-weight: 700; line-height: 1.1; display: block;
+  font-family: Caprasimo, sans-serif; font-size: var(--t-2xl);
+  font-weight: 400; line-height: 1.1; display: block;
 }
 .stat__val small { font-size: var(--t-md); font-weight: 600; color: var(--fg-muted); }
 .stat__key { font-size: var(--t-xs); color: var(--fg-muted); margin-top: var(--s-1); }
@@ -631,7 +670,7 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
 
 /* ---------- Print: the nurse handout ---------- */
 @media print {
-  .appbar, .nav, .toast-wrap, .btn, .drinks { display: none !important; }
+  .gearbar, .nav, .toast-wrap, .btn, .drinks { display: none !important; }
   body { background: #fff; }
   .card { box-shadow: none; border: 1px solid #999; break-inside: avoid; }
 }
