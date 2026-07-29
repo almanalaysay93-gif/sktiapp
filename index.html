@@ -6,9 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Fluid and weight tracker for haemodialysis patients of the SPMC Kidney and Transplant Institute (SKTI), Davao City. Works offline. All data stays on the phone.">
 <!-- Matches the page background, not a brand bar — there is no header to blend with. -->
-<meta name="theme-color" content="#F5EAD8" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#211E19" media="(prefers-color-scheme: dark)">
-<title>SKTI Tubig — Fluid &amp; Weight Tracker</title>
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1C1917" media="(prefers-color-scheme: dark)">
+<title>SKTI Patient Profile — Fluid &amp; Weight Tracker</title>
 
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
@@ -140,16 +140,28 @@
 
 <div class="shell">
 
-  <!-- No app bar: the bottom nav already says which view is open, and the
-       vertical space is worth more to an elderly user than a title strip.
-       The settings gear floats top-right and content scrolls under it. -->
-  <h1 class="sr-only">SKTI Tubig — SPMC Kidney &amp; Transplant Institute</h1>
-
-  <div class="gearbar">
-    <button type="button" class="gear" id="btnSettings" aria-label="Settings">
-      <svg aria-hidden="true"><use href="#i-settings"/></svg>
-    </button>
-  </div>
+  <!-- Sticky so the gear stays reachable while content scrolls under it,
+       same rule the old empty gearbar followed — it just now carries the
+       building photo instead of blank page background. -->
+  <header class="app-header">
+    <img class="app-header__photo" src="assets/skti-building.jpg" alt=""
+         onerror="this.remove()">
+    <div class="app-header__scrim"></div>
+    <div class="app-header__row">
+      <span class="app-header__badge">
+        <img src="assets/logo.png"
+             alt="Department of Health, Republic of the Philippines — Southern Philippines Medical Center seal"
+             onerror="this.parentNode.remove()">
+      </span>
+      <h1 class="app-header__title">
+        SKTI Patient Profile
+        <span class="app-header__sub">SPMC Kidney &amp; Transplant Institute</span>
+      </h1>
+      <button type="button" class="app-header__gear" id="btnSettings" aria-label="Settings">
+        <svg aria-hidden="true"><use href="#i-settings"/></svg>
+      </button>
+    </div>
+  </header>
 
   <!-- ===== Main ===== -->
   <main class="main" id="main" tabindex="-1">

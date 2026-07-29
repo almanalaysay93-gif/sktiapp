@@ -278,14 +278,15 @@ export function glassesLeft() {
 
 const SCHEDULE_DOW = { MWF: [1, 3, 5], TTS: [2, 4, 6] };
 
-export function nextSessionDate() {
+/** Day-of-week numbers (0=Sun) the patient dialyzes on, per their schedule. */
+export function scheduleDays() {
   const p = getProfile();
-  let days = SCHEDULE_DOW[p.schedule];
-  if (p.schedule === 'CUSTOM' && Array.isArray(p.customDays)) {
-    days = p.customDays;
-  }
-  if (!days) days = SCHEDULE_DOW.MWF;
+  if (p.schedule === 'CUSTOM' && Array.isArray(p.customDays)) return p.customDays;
+  return SCHEDULE_DOW[p.schedule] || SCHEDULE_DOW.MWF;
+}
 
+export function nextSessionDate() {
+  const days = scheduleDays();
   const now = new Date();
   for (let i = 0; i <= 7; i++) {
     const d = new Date(now);

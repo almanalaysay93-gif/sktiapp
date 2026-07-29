@@ -5,7 +5,7 @@
    Bump CACHE on every release or patients keep the old shell.
    =================================================================== */
 
-const CACHE = 'skti-tubig-v17';
+const CACHE = 'skti-tubig-v23';
 
 const SHELL = [
   './',
@@ -24,9 +24,13 @@ const SHELL = [
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE)
-      // addAll rejects the whole batch if one file 404s (assets/logo.png is
-      // optional), so cache each file independently.
-      .then(c => Promise.all(SHELL.map(url => c.add(url).catch(() => {}))))
+      // cache:'reload' bypasses the browser's own HTTP cache — c.add()
+      // alone can hand a version bump a stale file straight out of that
+      // cache, silently undoing the bump. addAll rejects the whole batch
+      // if one file 404s (assets/logo.png is optional), so cache each
+      // file independently.
+      .then(c => Promise.all(SHELL.map(url =>
+        fetch(url, { cache: 'reload' }).then(res => res.ok && c.put(url, res)).catch(() => {}))))
       .then(() => self.skipWaiting())
   );
 });

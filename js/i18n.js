@@ -17,7 +17,7 @@ const STRINGS = {
     'nav.session': 'Dialysis',
     'nav.settings': 'Settings',
 
-    'app.name': 'SKTI Tubig',
+    'app.name': 'SKTI Patient Profile',
     'app.sub': 'SPMC Kidney & Transplant Institute',
 
     'meds.title': 'Mga Tambal',
@@ -64,6 +64,9 @@ const STRINGS = {
     'today.noBaselineMsg': 'Irekord una ang imong timbang human sa dialysis aron makwenta ang nadugang.',
     'today.noWeight': 'Wala pa timbang karon',
     'today.noWeightMsg': 'Timbanga imong kaugalingon karong buntag, dayon isulod diri.',
+    'today.trends': 'Kalihokan sa mga adlaw',
+    'today.calSchedDay': 'Adlaw sa dialysis',
+    'today.calLogged': 'Narekord',
 
     'reminder.tomorrow': 'Ugma',
     'reminder.daysFromNow': 'ka adlaw pa',
@@ -154,6 +157,8 @@ const STRINGS = {
     'common.offline': 'Offline ka karon. Naa gihapon ang tanan nimong datos.',
     'common.errNumber': 'Isulod ang husto nga numero.',
     'common.errRange': 'Morag sayop ang numero. Susiha usab.',
+    'common.prevMonth': 'Miaging bulan',
+    'common.nextMonth': 'Sunod bulan',
 
     'fluid.drinkTitle': 'Imnon',
     'fluid.foodTitle': 'Pagkaon nga tubig gihapon',
@@ -226,7 +231,7 @@ const STRINGS = {
     'nav.session': 'Dialysis',
     'nav.settings': 'Settings',
 
-    'app.name': 'SKTI Tubig',
+    'app.name': 'SKTI Patient Profile',
     'app.sub': 'SPMC Kidney & Transplant Institute',
 
     'meds.title': 'Mga Gamot',
@@ -273,6 +278,9 @@ const STRINGS = {
     'today.noBaselineMsg': 'Itala muna ang timbang mo pagkatapos ng dialysis para makuwenta ang nadagdag.',
     'today.noWeight': 'Wala pang timbang ngayon',
     'today.noWeightMsg': 'Magtimbang ngayong umaga, tapos ilagay dito.',
+    'today.trends': 'Takbo ng mga araw',
+    'today.calSchedDay': 'Araw ng dialysis',
+    'today.calLogged': 'Naitala',
 
     'reminder.tomorrow': 'Bukas',
     'reminder.daysFromNow': 'araw pa',
@@ -363,6 +371,8 @@ const STRINGS = {
     'common.offline': 'Offline ka ngayon. Nandiyan pa rin lahat ng datos mo.',
     'common.errNumber': 'Maglagay ng tamang numero.',
     'common.errRange': 'Mukhang mali ang numero. Pakisuri ulit.',
+    'common.prevMonth': 'Nakaraang buwan',
+    'common.nextMonth': 'Susunod na buwan',
 
     'fluid.drinkTitle': 'Inumin',
     'fluid.foodTitle': 'Pagkaing tubig din',
@@ -435,7 +445,7 @@ const STRINGS = {
     'nav.session': 'Dialysis',
     'nav.settings': 'Settings',
 
-    'app.name': 'SKTI Tubig',
+    'app.name': 'SKTI Patient Profile',
     'app.sub': 'SPMC Kidney & Transplant Institute',
 
     'meds.title': 'Medications',
@@ -482,6 +492,9 @@ const STRINGS = {
     'today.noBaselineMsg': 'Record your weight after dialysis first so the gain can be counted.',
     'today.noWeight': 'No weight today',
     'today.noWeightMsg': 'Weigh yourself this morning, then enter it here.',
+    'today.trends': 'Recent trends',
+    'today.calSchedDay': 'Dialysis day',
+    'today.calLogged': 'Logged',
 
     'reminder.tomorrow': 'Tomorrow',
     'reminder.daysFromNow': 'days from now',
@@ -572,6 +585,8 @@ const STRINGS = {
     'common.offline': 'You are offline. All your data is still here.',
     'common.errNumber': 'Enter a valid number.',
     'common.errRange': 'That number looks wrong. Please check it.',
+    'common.prevMonth': 'Previous month',
+    'common.nextMonth': 'Next month',
 
     'fluid.drinkTitle': 'Drinks',
     'fluid.foodTitle': 'Food that counts as fluid',

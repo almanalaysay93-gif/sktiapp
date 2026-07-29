@@ -22,22 +22,19 @@ const icon = (name, cls = '') =>
 
 const nf = (n, d = 1) => Number(n).toFixed(d);
 
+const localeTag = () => ({ ceb: 'fil-PH', tl: 'fil-PH', en: 'en-PH' }[getLang()]);
+
 function fmtDate(ts) {
-  return new Date(ts).toLocaleDateString(
-    { ceb: 'fil-PH', tl: 'fil-PH', en: 'en-PH' }[getLang()],
-    { day: 'numeric', month: 'short' }
-  );
+  return new Date(ts).toLocaleDateString(localeTag(), { day: 'numeric', month: 'short' });
 }
 function fmtTime(ts) {
-  return new Date(ts).toLocaleTimeString(
-    { ceb: 'fil-PH', tl: 'fil-PH', en: 'en-PH' }[getLang()],
-    { hour: 'numeric', minute: '2-digit' }
-  );
+  return new Date(ts).toLocaleTimeString(localeTag(), { hour: 'numeric', minute: '2-digit' });
 }
 
 /* ---------- app state (view only; data lives in store) ---------- */
 
 let view = 'today';
+let calCursor = new Date();   // month currently shown on Today's calendar
 
 /* ===================================================================
    Toast
@@ -589,6 +586,169 @@ function nextHdReminder() {
   });
 }
 
+/* ---------- Today: trend charts ----------
+   One small chart per other tab (Fluid, Weight, Meds, Dialysis) so Today
+   is a dashboard of the whole app, not just the gain number. Every chart
+   is a plain SVG built by hand — same offline-first rule as sparkline()
+   below — and every card is tappable straight through to the tab that
+   owns the real data (data-go, handled by the existing router). */
+
+function miniBars(values, { refValue, dangerAbove } = {}) {
+  const n = values.length;
+  if (n < 2) return '';
+  const W = 320, H = 96, PAD = 8, gap = 6;
+  const top = Math.max(...values, refValue || 0, 1) * 1.08;
+  const barW = (W - PAD * 2 - gap * (n - 1)) / n;
+  const y = v => H - PAD - (v / top) * (H - PAD * 2);
+  const bars = values.map((v, i) => {
+    const yTop = y(v);
+    const h = Math.max(2, (H - PAD) - yTop);
+    const x = PAD + i * (barW + gap);
+    const over = dangerAbove != null && v > dangerAbove;
+    return `<rect class="bar${over ? ' bar--danger' : ''}"
+              x="${x.toFixed(1)}" y="${yTop.toFixed(1)}"
+              width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="3"/>`;
+  }).join('');
+  const ref = refValue != null
+    ? `<line class="spark__dry" x1="${PAD}" y1="${y(refValue).toFixed(1)}"
+             x2="${W - PAD}" y2="${y(refValue).toFixed(1)}"/>`
+    : '';
+  return `<svg class="minibars" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"
+       role="img" aria-label="${n} bars, most recent ${nf(values[values.length - 1], 0)}">
+    ${ref}${bars}
+  </svg>`;
+}
+
+function fluidWeekChart() {
+  const p = S.getProfile();
+  const all = S.getIntake();
+  const days = [...Array(7)].map((_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (6 - i)); return S.dayKey(d);
+  });
+  const totals = days.map(key => all.filter(x => x.day === key).reduce((sum, x) => sum + x.ml, 0));
+  if (totals.filter(v => v > 0).length < 2) return '';
+  return `
+  <button type="button" class="card chart-card" data-go="fluid">
+    <div class="card__head">${icon('droplet')}<h2>${esc(t('fluid.title'))}</h2></div>
+    ${miniBars(totals, { refValue: p.allowanceMl, dangerAbove: p.allowanceMl })}
+    <div class="chart-legend">
+      <span><i style="background:var(--brand)"></i>${esc(t('fluid.logTitle'))}</span>
+      <span><i style="background:var(--fg-muted)"></i>${esc(t('today.limitLabel'))}: ${p.allowanceMl} ${esc(t('common.ml'))}</span>
+    </div>
+  </button>`;
+}
+
+function weightTrendChart() {
+  const p = S.getProfile();
+  const recent = S.getWeights().slice(0, 14);
+  if (recent.length < 2) return '';
+  return `
+  <button type="button" class="card chart-card" data-go="weight">
+    <div class="card__head">${icon('trending')}<h2>${esc(t('weight.chartTitle'))}</h2></div>
+    ${sparkline(recent, p.dryWeightKg)}
+  </button>`;
+}
+
+function medsTodayChart() {
+  const meds = S.getMedications().filter(m => m.active !== false);
+  if (!meds.length) return '';
+  const logs = S.todayMedLogs();
+  const taken = meds.filter(m => logs[`${m.id}_default`]).length;
+  const pct = Math.round((taken / meds.length) * 100);
+  return `
+  <button type="button" class="card chart-card" data-go="meds">
+    <div class="card__head">${icon('pill')}<h2>${esc(t('meds.title'))}</h2></div>
+    <div class="meter meter--brand">
+      <div class="meter__track">
+        <div class="meter__fill" style="width:${pct}%" role="progressbar"
+             aria-valuenow="${taken}" aria-valuemin="0" aria-valuemax="${meds.length}"
+             aria-label="${esc(t('meds.title'))}"></div>
+      </div>
+      <p class="meter__scale">
+        <span class="tnum">${taken} / ${meds.length} ${esc(t('meds.taken'))}</span>
+        <span class="tnum">${pct}%</span>
+      </p>
+    </div>
+  </button>`;
+}
+
+function sessionUfChart() {
+  const values = S.getSessions().slice(0, 6).reverse()
+    .map(s => s.ufL).filter(v => v != null);
+  if (values.length < 2) return '';
+  return `
+  <button type="button" class="card chart-card" data-go="session">
+    <div class="card__head">${icon('activity')}<h2>${esc(t('session.title'))}</h2></div>
+    ${miniBars(values, {})}
+    <div class="chart-legend">
+      <span><i style="background:var(--brand)"></i>${esc(t('session.uf'))}</span>
+    </div>
+  </button>`;
+}
+
+/** Month calendar: dialysis days tinted, today ringed, logged sessions
+    dotted. Read-only overview — only the month-nav arrows are tappable,
+    so there's no ambiguity about what tapping a past/future day would
+    do. calCursor is module state so prev/next survives re-render. */
+function calendarCard() {
+  const schedDays = S.scheduleDays();
+  const sessionDays = new Set(S.getSessions().map(s => s.day));
+  const todayKey = S.dayKey();
+
+  const year = calCursor.getFullYear();
+  const month = calCursor.getMonth();
+  const first = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const monthLabel = new Intl.DateTimeFormat(localeTag(), { month: 'long', year: 'numeric' }).format(first);
+  // 2023-01-01 is a Sunday — just a stable anchor to read Sun..Sat labels off of.
+  const weekdayFmt = new Intl.DateTimeFormat(localeTag(), { weekday: 'narrow' });
+  const heads = [...Array(7)].map((_, i) =>
+    `<span>${esc(weekdayFmt.format(new Date(2023, 0, 1 + i)))}</span>`).join('');
+
+  const cells = [];
+  for (let i = 0; i < first.getDay(); i++) cells.push('<span class="cal__cell cal__cell--pad"></span>');
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(year, month, d);
+    const key = S.dayKey(date);
+    const cls = ['cal__cell',
+      schedDays.includes(date.getDay()) ? 'cal__cell--sched' : '',
+      key === todayKey ? 'cal__cell--today' : ''
+    ].filter(Boolean).join(' ');
+    cells.push(`<span class="${cls}">${d}${sessionDays.has(key) ? '<i class="cal__dot"></i>' : ''}</span>`);
+  }
+
+  return `
+  <div class="card">
+    <div class="cal__head">
+      <h2>${esc(monthLabel)}</h2>
+      <div class="cal__nav">
+        <button type="button" class="cal__navbtn" data-cal-nav="-1" aria-label="${esc(t('common.prevMonth'))}">
+          ${icon('chevron-right', 'cal__navicon--prev')}
+        </button>
+        <button type="button" class="cal__navbtn" data-cal-nav="1" aria-label="${esc(t('common.nextMonth'))}">
+          ${icon('chevron-right')}
+        </button>
+      </div>
+    </div>
+    <div class="cal__grid cal__grid--head">${heads}</div>
+    <div class="cal__grid">${cells.join('')}</div>
+    <div class="chart-legend">
+      <span><i style="background:var(--brand-tint-2)"></i>${esc(t('today.calSchedDay'))}</span>
+      <span><i class="chart-legend__dot" style="background:var(--brand-dark)"></i>${esc(t('today.calLogged'))}</span>
+    </div>
+  </div>`;
+}
+
+function trendsSection() {
+  const cards = [fluidWeekChart(), weightTrendChart(), medsTodayChart(), sessionUfChart()]
+    .filter(Boolean);
+  if (!cards.length) return '';
+  return `
+  <h2 class="section-title">${esc(t('today.trends'))}</h2>
+  ${cards.join('')}`;
+}
+
 function viewToday() {
   // Uncalibrated scales silently bias every gain figure, so nudge once
   // there is a baseline to calibrate against.
@@ -610,6 +770,8 @@ function viewToday() {
     ${fluidReminder()}
     ${weightReminder()}
     ${nextHdReminder()}
+    ${calendarCard()}
+    ${trendsSection()}
   </div>`;
 }
 
@@ -862,8 +1024,7 @@ function viewSession() {
     <div class="card">
       <div class="card__head">${icon('calendar')}<h2>${esc(t('session.nextDue'))}</h2></div>
       <p class="status__num tnum" style="font-size:var(--t-xl);text-align:center">
-        ${next ? esc(new Intl.DateTimeFormat(
-            { ceb: 'fil-PH', tl: 'fil-PH', en: 'en-PH' }[getLang()],
+        ${next ? esc(new Intl.DateTimeFormat(localeTag(),
             { weekday: 'long', day: 'numeric', month: 'long' }).format(next))
           : '—'}
       </p>
@@ -917,23 +1078,7 @@ function viewSettings() {
   const p = S.getProfile();
   return `
   <div class="view">
-    <div class="brand">
-      <span class="brand__mark">
-        <img src="assets/logo.png" alt=""
-             onerror="this.remove();this.parentNode.querySelector('svg').hidden=false">
-        <svg hidden aria-hidden="true"><use href="#i-kidney"/></svg>
-      </span>
-      <span>
-        <span class="brand__name">${esc(t('app.name'))}</span><br>
-        <span class="brand__sub">${esc(t('app.sub'))}</span>
-      </span>
-    </div>
-
-    <figure class="figure">
-      <img src="assets/skti-building.jpg" alt="SKTI building, Southern Philippines Medical Center, Davao City"
-           onerror="this.closest('.figure').hidden=true">
-      <figcaption>SKTI — SPMC Kidney and Transplant Institute, Davao City</figcaption>
-    </figure>
+    <p class="settings-intro">SKTI — SPMC Kidney and Transplant Institute, Davao City</p>
 
     <h2 class="section-title">${esc(t('settings.language'))}</h2>
     <div class="seg" role="group" aria-label="${esc(t('settings.language'))}">
@@ -1351,7 +1496,7 @@ function render() {
 function onClick(e) {
   const el = e.target.closest('[data-go],[data-ml],[data-lang],[data-sched],[data-theme-set],' +
     '[data-del-intake],[data-del-weight],[data-del-session],[data-empty-action],' +
-    '[data-toggle-med],[data-edit-med],[data-toggle-chk],[data-del-hdbp],' +
+    '[data-toggle-med],[data-edit-med],[data-toggle-chk],[data-del-hdbp],[data-cal-nav],' +
     '#btnWeigh,#btnSession,#btnSettings,#btnAddMed,#btnLogHdBp,#pSave,#btnPrint,#btnWipe,' +
     '#btnCalibrate,#btnExport,#btnImport,#btnInstall,' +
     '#btnCalSchedule,#btnCalWeigh,#btnCalSessions,#btnCalGoogle');
@@ -1361,6 +1506,11 @@ function onClick(e) {
   if (el.id === 'btnCalWeigh')    return calWeighIn();
   if (el.id === 'btnCalSessions') return calSessions();
   if (el.id === 'btnCalGoogle')   return calOpenGoogle();
+
+  if (el.dataset.calNav) {
+    calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() + Number(el.dataset.calNav), 1);
+    return render();
+  }
 
   if (el.dataset.go)         return go(el.dataset.go);
   if (el.id === 'btnSettings') return go('settings');
@@ -1523,4 +1673,10 @@ function boot() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', boot);
+// A module script can finish loading after DOMContentLoaded has already
+// fired (slow network, cheap phone) — the listener would then never run.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
+}

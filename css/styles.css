@@ -13,49 +13,43 @@
    Base font 18px: users skew elderly.
    =================================================================== */
 
-/* ---------- Tokens: light (Organic, direct) ---------- */
+/* ---------- Tokens: light (Orange & White) ---------- */
 :root {
-  /* Brand — Organic's terracotta accent, stepped to accent-600/700 for
-     on-brand contrast rather than the design system's base accent-500. */
-  --brand:        #B2622D;  /* accent-600 */
-  --brand-dark:   #8C491A;  /* accent-700, hover/active */
-  --brand-tint:   #FFF2EB;  /* accent-100 */
-  --brand-tint-2: #FFE1D0;  /* accent-200 */
+  /* Brand — orange-700/800 rather than the punchier orange-500/600: at
+     that depth --on-brand white still clears 4.5:1, which #F97316-class
+     orange does not. */
+  --brand:        #C2410C;  /* orange-700 */
+  --brand-dark:   #9A3412;  /* orange-800, hover/active */
+  --brand-tint:   #FFF7ED;  /* orange-50 */
+  --brand-tint-2: #FFEDD5;  /* orange-100 */
   --on-brand:     #FFFFFF;
 
-  /* Surfaces — cards recede a shade deeper than the page (Organic's own
-     elevation direction: --color-surface is darker than --color-bg). */
-  --bg:         #F5EAD8;
-  --surface:    #EBDDC5;
-  --surface-2:  #F9F4ED;   /* lifted chip tone — segmented controls, hover */
-  --fg:         #201E1D;
-  --fg-muted:   #645C50;   /* Organic's neutral-700 — solid, not color-mix:
-                              getComputedStyle resolves color-mix() to a
-                              color(srgb …) function form that broke the
-                              alpha-composited contrast check; a solid
-                              value from the system's own tonal ramp is
-                              both simpler and more faithful to it. */
-  --border:     color-mix(in srgb, #201E1D 16%, transparent);  /* hairline only, no contrast floor */
-  --border-strong: #82796A;   /* neutral-600 — component boundaries, WCAG 1.4.11 */
+  /* Surfaces — true white page per the requested theme; cards get a hint
+     of the brand-50 tint so they still recede a shade from --bg. */
+  --bg:         #FFFFFF;
+  --surface:    #FFF7ED;
+  --surface-2:  #FFFFFF;   /* lifted chip tone — segmented controls, hover */
+  --fg:         #1C1917;
+  --fg-muted:   #57534E;   /* stone-600, ~7.5:1 on white — elderly-tuned margin above the 4.5:1 floor */
+  --border:     color-mix(in srgb, #1C1917 14%, transparent);  /* hairline only, no contrast floor */
+  --border-strong: #78716C;   /* stone-500 — component boundaries, WCAG 1.4.11 */
 
-  /* Semantic status — SKTI-specific, distinct from the terracotta accent
-     hue so a status is never confused with a brand action. --warn is
-     stepped darker than the reference's #B8862E, which read 2.4:1 on
-     --surface — nowhere near AA.
-     Never color alone (ux rule: color-not-only). */
-  --ok:        #3E6B40;
-  --ok-tint:   #E6EFE2;
-  --warn:      #8C6018;
-  --warn-tint: #F7ECD3;
-  --danger:    #963527;
-  --danger-tint: #F6E2DC;
+  /* Semantic status — pushed to yellow/green/red rather than amber, so
+     none of them sit next to the orange brand hue on the wheel and read
+     as a brand action (ux rule: color-not-only — never color alone). */
+  --ok:        #15803D;
+  --ok-tint:   #F0FDF4;
+  --warn:      #854D0E;
+  --warn-tint: #FEFCE8;
+  --danger:    #B91C1C;
+  --danger-tint: #FEF2F2;
 
   /* Shape + motion */
   --radius:    16px;
   --radius-sm: 8px;
   --radius-lg: 28px;
-  --shadow:    0 1px 2px color-mix(in srgb, #2E2B25 14%, transparent);
-  --shadow-lg: 0 12px 32px color-mix(in srgb, #2E2B25 22%, transparent);
+  --shadow:    0 1px 2px color-mix(in srgb, #1C1917 14%, transparent);
+  --shadow-lg: 0 12px 32px color-mix(in srgb, #1C1917 22%, transparent);
   --dur:       200ms;
   --ease-out:  cubic-bezier(.2,.8,.3,1);
 
@@ -82,41 +76,41 @@
   --shell-max: 480px;
 }
 
-/* ---------- Tokens: dark (original extension — Organic ships light-only) ---------- */
+/* ---------- Tokens: dark (Orange & White — lifted/desaturated, not inverted) ---------- */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --brand:        #F6A06B;  /* accent-400, lifted + desaturated, not inverted */
-    --brand-dark:   #FFC6A5;  /* accent-300, hover/active */
-    --brand-tint:   #3D2E22;
-    --brand-tint-2: #4A3628;
-    --on-brand:     #2E1608;
+    --brand:        #FB923C;  /* orange-400, lifted + desaturated, not inverted */
+    --brand-dark:   #FDBA74;  /* orange-300, hover/active */
+    --brand-tint:   #431407;
+    --brand-tint-2: #7C2D12;
+    --on-brand:     #431407;
 
-    --bg:         #211E19;
-    --surface:    #362F26;   /* cards lift lighter than the page in dark mode */
-    --surface-2:  #423A2F;
-    --fg:         #F3ECE0;
-    --fg-muted:   #C8BFAE;   /* solid, not color-mix — see the light-mode note */
-    --border:     color-mix(in srgb, #F3ECE0 18%, transparent);  /* hairline only, no contrast floor */
-    --border-strong: #8C8171;
+    --bg:         #1C1917;
+    --surface:    #292524;   /* cards lift lighter than the page in dark mode */
+    --surface-2:  #3A3532;
+    --fg:         #FAFAF9;
+    --fg-muted:   #D6D3D1;   /* solid, not color-mix — see the light-mode note */
+    --border:     color-mix(in srgb, #FAFAF9 18%, transparent);  /* hairline only, no contrast floor */
+    --border-strong: #A8A29E;
 
-    --ok:        #8FC290;  --ok-tint:     #1F2E1F;
-    --warn:      #E0AC5C;  --warn-tint:   #332510;
-    --danger:    #E2897A;  --danger-tint: #34201B;
+    --ok:        #4ADE80;  --ok-tint:     #14532D;
+    --warn:      #FACC15;  --warn-tint:   #422006;
+    --danger:    #F87171;  --danger-tint: #450A0A;
 
     --shadow:    0 1px 2px rgba(0,0,0,.4), 0 4px 12px rgba(0,0,0,.35);
     --shadow-lg: 0 2px 6px rgba(0,0,0,.45), 0 12px 28px rgba(0,0,0,.5);
   }
 }
 :root[data-theme="dark"] {
-  --brand: #F6A06B; --brand-dark: #FFC6A5; --brand-tint: #3D2E22;
-  --brand-tint-2: #4A3628; --on-brand: #2E1608;
-  --bg: #211E19; --surface: #362F26; --surface-2: #423A2F;
-  --fg: #F3ECE0; --fg-muted: #C8BFAE;
-  --border: color-mix(in srgb, #F3ECE0 18%, transparent);
-  --border-strong: #8C8171;
-  --ok: #8FC290; --ok-tint: #1F2E1F;
-  --warn: #E0AC5C; --warn-tint: #332510;
-  --danger: #E2897A; --danger-tint: #34201B;
+  --brand: #FB923C; --brand-dark: #FDBA74; --brand-tint: #431407;
+  --brand-tint-2: #7C2D12; --on-brand: #431407;
+  --bg: #1C1917; --surface: #292524; --surface-2: #3A3532;
+  --fg: #FAFAF9; --fg-muted: #D6D3D1;
+  --border: color-mix(in srgb, #FAFAF9 18%, transparent);
+  --border-strong: #A8A29E;
+  --ok: #4ADE80; --ok-tint: #14532D;
+  --warn: #FACC15; --warn-tint: #422006;
+  --danger: #F87171; --danger-tint: #450A0A;
   --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 12px rgba(0,0,0,.35);
   --shadow-lg: 0 2px 6px rgba(0,0,0,.45), 0 12px 28px rgba(0,0,0,.5);
 }
@@ -186,60 +180,80 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
   .shell { box-shadow: var(--shadow-lg); }
 }
 
-/* ---------- Settings gear ----------
-   Sticky rather than fixed so it inherits the shell's max-width and
-   centring for free. The row itself ignores pointer events, so only the
-   button is clickable and content scrolls freely underneath. */
-.gearbar {
+/* ---------- App header ----------
+   Sticky so the gear and the SKTI identity stay reachable while content
+   scrolls underneath — the same contract the old empty gearbar made.
+   Photo and logo are sized with position:absolute + inset (not percentage
+   width/height on a place-items:center child) on purpose: the previous
+   .brand__mark used width/height:100% inside a `display:grid;
+   place-items:center` box, and percentage sizing there resolves against
+   the item's own auto height rather than the grid track in some engines
+   — the seal quietly grew past its 48px box and overflow:hidden clipped
+   the bottom of it. inset:0 pins the box to the parent's padding edges
+   directly, so there's no ambiguous percentage to resolve. */
+.app-header {
   position: sticky; top: 0; z-index: var(--z-nav);
-  display: flex; justify-content: flex-end;
-  padding: max(env(safe-area-inset-top), var(--s-2)) var(--s-3) 0;
-  pointer-events: none;
-  /* Fades the content out behind the gear instead of a hard bar edge. */
-  background: linear-gradient(to bottom, var(--bg) 55%, transparent);
+  height: calc(100px + env(safe-area-inset-top));
+  overflow: hidden;
+  border-bottom: 3px solid var(--brand);  /* echoes the real building's own orange facade band */
 }
-.gear {
-  pointer-events: auto;
-  width: var(--tap); height: var(--tap);
+.app-header__photo {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: center 42%;
+}
+.app-header__scrim {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg,
+    rgba(20,12,4,.12) 0%, rgba(20,12,4,.38) 60%, rgba(20,12,4,.74) 100%);
+}
+.app-header__row {
+  position: relative; z-index: 1;
+  height: 100%;
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: max(env(safe-area-inset-top), var(--s-2)) var(--s-4) 0;
+}
+.app-header__badge {
+  position: relative; flex: 0 0 48px;
+  width: 48px; height: 48px;
+  border-radius: 50%; background: #FFFFFF;
+  box-shadow: var(--shadow); overflow: hidden;
+}
+.app-header__badge img {
+  position: absolute; inset: 3px;
+  width: calc(100% - 6px); height: calc(100% - 6px);
+  object-fit: contain;
+}
+/* Name/sub are fixed light values, not theme tokens — they sit on a photo
+   with a dark scrim, not on --surface, so light/dark mode doesn't apply. */
+.app-header__title {
+  flex: 1 1 auto; min-width: 0; margin: 0;
+  font-size: var(--t-md); font-weight: 400; line-height: 1.2;
+  color: #FFFFFF; text-shadow: 0 1px 3px rgba(0,0,0,.45);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.app-header__sub {
+  display: block; margin-top: 2px;
+  font-family: Figtree, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: var(--t-xs); font-weight: 500; letter-spacing: .01em;
+  color: rgba(255,255,255,.88); text-shadow: 0 1px 2px rgba(0,0,0,.4);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.app-header__gear {
+  flex: 0 0 var(--tap); width: var(--tap); height: var(--tap);
   display: grid; place-items: center;
-  border: 1px solid var(--border);
   border-radius: 50%;
-  background: var(--surface);
-  color: var(--fg-muted);
-  box-shadow: var(--shadow);
-  transition: color var(--dur) var(--ease-out),
-              border-color var(--dur) var(--ease-out),
-              transform 120ms var(--ease-out);
+  border: 1px solid rgba(255,255,255,.4);
+  background: rgba(20,12,4,.34);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  color: #FFFFFF;
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  transition: background var(--dur) var(--ease-out), transform 120ms var(--ease-out);
   touch-action: manipulation;
 }
-.gear:hover { color: var(--brand); border-color: var(--brand); }
-.gear:active { transform: scale(.94); }
-.gear svg { width: 26px; height: 26px; }
-
-/* Brand block, kept only inside Settings now that the app bar is gone.
-   Drop the official SKTI logo at assets/logo.png and it appears here. */
-.brand { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-5); }
-.brand__mark {
-  width: 48px; height: 48px; flex: 0 0 48px;
-  border-radius: 12px; background: var(--brand-tint); color: var(--brand);
-  display: grid; place-items: center; overflow: hidden;
-}
-.brand__mark img { width: 100%; height: 100%; object-fit: contain; }
-.brand__mark svg { width: 28px; height: 28px; }
-.brand__name { font-size: var(--t-lg); font-weight: 700; }
-.brand__sub  { font-size: var(--t-xs); color: var(--fg-muted); }
-
-/* Licensed SKTI building photo — Settings only, not a persistent header
-   (the app deliberately has no header; see .gearbar above). */
-.figure {
-  margin: 0 0 var(--s-5); border-radius: var(--radius-lg); overflow: hidden;
-  box-shadow: var(--shadow); border: 1px solid var(--border);
-}
-.figure img { width: 100%; display: block; max-height: 180px; object-fit: cover; }
-.figure figcaption {
-  padding: var(--s-2) var(--s-4); background: var(--surface);
-  font-size: var(--t-xs); color: var(--fg-muted); text-align: center;
-}
+.app-header__gear:hover { background: rgba(20,12,4,.5); }
+.app-header__gear:active { transform: scale(.94); }
+.app-header__gear svg { width: 26px; height: 26px; }
 
 /* ---------- Main ---------- */
 .main {
@@ -258,6 +272,13 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
   margin: var(--s-5) 0 var(--s-3);
 }
 .section-title:first-child { margin-top: 0; }
+
+/* Logo, name and building photo already live in .app-header — this is
+   just the one-line attribution, not a second brand block. */
+.settings-intro {
+  margin: 0 0 var(--s-2);
+  font-size: var(--t-sm); color: var(--fg-muted); text-align: center;
+}
 
 /* ---------- Card ---------- */
 .card {
@@ -335,6 +356,7 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
 .meter--ok     .meter__fill { background: var(--ok); }
 .meter--warn   .meter__fill { background: var(--warn); }
 .meter--danger .meter__fill { background: var(--danger); }
+.meter--brand  .meter__fill { background: var(--brand); }  /* progress, not a clinical band */
 .meter__scale {
   display: flex; justify-content: space-between;
   font-size: var(--t-xs); color: var(--fg-muted); margin-top: var(--s-2);
@@ -428,6 +450,19 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
 .reminder__sub { display: block; font-size: var(--t-xs); color: var(--fg-muted); margin-top: 2px; }
 .reminder__chev { width: 20px; height: 20px; flex: 0 0 20px; color: var(--fg-muted); }
 
+/* Today's trend cards — .card as a full-width tappable button, same
+   hand-off pattern as .reminder above but chart-shaped. */
+.chart-card {
+  display: block; width: 100%; text-align: left;
+  cursor: pointer;
+  transition: border-color var(--dur) var(--ease-out),
+              background var(--dur) var(--ease-out),
+              transform 120ms var(--ease-out);
+  touch-action: manipulation;
+}
+.chart-card:hover { border-color: var(--border-strong); background: var(--surface-2); }
+.chart-card:active { transform: scale(.98); }
+
 /* ---------- List rows ---------- */
 .row {
   display: flex; align-items: center; gap: var(--s-3);
@@ -508,12 +543,55 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
 .spark__dry   { stroke: var(--fg-muted); stroke-width: 2; stroke-dasharray: 5 4; }
 .spark__dot   { fill: var(--brand); }
 .spark__lbl   { fill: var(--fg-muted); font-size: 11px; }
+
+/* ---------- Mini bar chart (Today trend cards) ---------- */
+.minibars { width: 100%; height: 96px; display: block; overflow: visible; margin-top: var(--s-2); }
+.minibars .bar { fill: var(--brand); }
+.minibars .bar--danger { fill: var(--danger); }
+
 .chart-legend {
   display: flex; flex-wrap: wrap; gap: var(--s-4);
   font-size: var(--t-xs); color: var(--fg-muted); margin-top: var(--s-3);
 }
 .chart-legend span { display: inline-flex; align-items: center; gap: var(--s-2); }
 .chart-legend i { width: 18px; height: 3px; border-radius: 2px; display: inline-block; }
+.chart-legend__dot { width: 10px !important; height: 10px !important; border-radius: 50%; }
+
+/* ---------- Today's month calendar ---------- */
+.cal__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s-3); }
+.cal__head h2 { font-size: var(--t-lg); }
+.cal__nav { display: flex; gap: var(--s-2); }
+.cal__navbtn {
+  width: 40px; height: 40px; display: grid; place-items: center;
+  border-radius: 50%; border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--fg-muted);
+  transition: color var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out),
+              transform 120ms var(--ease-out);
+  touch-action: manipulation;
+}
+.cal__navbtn:hover { color: var(--brand); border-color: var(--brand); }
+.cal__navbtn:active { transform: scale(.92); }
+.cal__navbtn svg { width: 18px; height: 18px; }
+.cal__navicon--prev { transform: rotate(180deg); transform-origin: center; }
+
+.cal__grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal__grid--head { margin-bottom: var(--s-1); }
+.cal__grid--head span {
+  display: block; text-align: center; padding: var(--s-1) 0;
+  font-size: var(--t-xs); font-weight: 700; color: var(--fg-muted);
+}
+.cal__cell {
+  position: relative; aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  font-size: var(--t-sm); font-weight: 600; color: var(--fg); border-radius: var(--radius-sm);
+}
+.cal__cell--pad { visibility: hidden; }
+.cal__cell--sched { background: var(--brand-tint-2); }
+.cal__cell--today { background: var(--brand); color: var(--on-brand); font-weight: 800; box-shadow: var(--shadow); }
+.cal__dot {
+  position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+  width: 5px; height: 5px; border-radius: 50%; background: var(--brand-dark);
+}
+.cal__cell--today .cal__dot { background: var(--on-brand); }
 
 /* ---------- Bottom nav ---------- */
 .nav {
@@ -670,7 +748,7 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
 
 /* ---------- Print: the nurse handout ---------- */
 @media print {
-  .gearbar, .nav, .toast-wrap, .btn, .drinks { display: none !important; }
+  .app-header, .nav, .toast-wrap, .btn, .drinks { display: none !important; }
   body { background: #fff; }
   .card { box-shadow: none; border: 1px solid #999; break-inside: avoid; }
 }
