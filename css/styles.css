@@ -1,55 +1,55 @@
 /* ===================================================================
-   SKTI Fluid & Weight Tracker — design tokens + components
-   Palette/type/shape ported from the "Organic" design system (warm
-   cream + terracotta, Caprasimo/Figtree) used in the SKTI Patient
-   Dashboard reference. Token NAMES are unchanged from the previous
-   clinical-teal pass — every view/component below still targets the
-   same custom properties, so only this block and the two font/shadow
-   declarations further down needed to move.
-   Organic ships light-only; the dark block is an original extension
-   (same hue families, lifted lightness) so the accessibility work
-   already verified in both themes — WCAG AA, 56px targets — carries
-   over rather than regressing to light-only.
+   SKTIDVO Fluid & Weight Tracker — design tokens + components
+   Palette: SKTI teal/green, sourced from the SKTI Kidney & Transplant
+   Institute seal (deep vessel teal + institute green), replacing the
+   prior orange system. Token NAMES are unchanged, so every component
+   below still targets the same custom properties.
+   Brand is deliberately LOW-chroma (institutional ink); every clinical
+   band (ok/warn/danger) is hue- AND chroma-separated from it so a
+   deuteranope (elevated prevalence in this patient cohort) never reads
+   brand chrome as a clinical signal — verified pairwise below. Teal
+   must never be used inside .status/.meter as a band color; those stay
+   ok/warn/danger only.
    Base font 18px: users skew elderly.
    =================================================================== */
 
-/* ---------- Tokens: light (Orange & White) ---------- */
+/* ---------- Tokens: light (SKTI Teal & White) ---------- */
 :root {
-  /* Brand — orange-700/800 rather than the punchier orange-500/600: at
-     that depth --on-brand white still clears 4.5:1, which #F97316-class
-     orange does not. */
-  --brand:        #C2410C;  /* orange-700 */
-  --brand-dark:   #9A3412;  /* orange-800, hover/active */
-  --brand-tint:   #FFF7ED;  /* orange-50 */
-  --brand-tint-2: #FFEDD5;  /* orange-100 */
+  /* Brand: seal's vessel teal (#0E7C86), deepened one step so
+     --on-brand white clears 5.97:1 instead of the raw hex's 4.95:1. */
+  --brand:        #0B6E78;
+  --brand-dark:   #075158;  /* hover/active */
+  --brand-tint:   #DFF2F4;
+  --brand-tint-2: #BCE5EA;
   --on-brand:     #FFFFFF;
 
-  /* Surfaces — true white page per the requested theme; cards get a hint
-     of the brand-50 tint so they still recede a shade from --bg. */
+  /* Surfaces — true white page; cards carry a faint teal cast so they
+     recede a shade from --bg without going grey. */
   --bg:         #FFFFFF;
-  --surface:    #FFF7ED;
+  --surface:    #F2F9FA;
   --surface-2:  #FFFFFF;   /* lifted chip tone — segmented controls, hover */
-  --fg:         #1C1917;
-  --fg-muted:   #57534E;   /* stone-600, ~7.5:1 on white — elderly-tuned margin above the 4.5:1 floor */
-  --border:     color-mix(in srgb, #1C1917 14%, transparent);  /* hairline only, no contrast floor */
-  --border-strong: #78716C;   /* stone-500 — component boundaries, WCAG 1.4.11 */
+  --fg:         #0D2026;   /* teal-black, ties to the seal's navy ring */
+  --fg-muted:   #3F5C65;   /* 7.17:1 on white — elderly-tuned margin above the 4.5:1 floor */
+  --border:     color-mix(in srgb, #0D2026 16%, transparent);  /* hairline only, no contrast floor */
+  --border-strong: #5E7B84;   /* component boundaries, WCAG 1.4.11 */
 
-  /* Semantic status — pushed to yellow/green/red rather than amber, so
-     none of them sit next to the orange brand hue on the wheel and read
-     as a brand action (ux rule: color-not-only — never color alone). */
-  --ok:        #15803D;
-  --ok-tint:   #F0FDF4;
-  --warn:      #854D0E;
-  --warn-tint: #FEFCE8;
-  --danger:    #B91C1C;
-  --danger-tint: #FEF2F2;
+  /* Semantic status — hue AND chroma separated from brand (69.8deg hue,
+     1.6-2.1x brand's chroma) so the signal survives full color
+     blindness even though brand and ok sit in the same green/teal
+     family. See the collision note above. */
+  --ok:        #3A7217;
+  --ok-tint:   #E8F5D6;
+  --warn:      #8A4B00;
+  --warn-tint: #FBEFD6;
+  --danger:    #A81D24;
+  --danger-tint: #FBE4E4;
 
   /* Shape + motion */
   --radius:    16px;
   --radius-sm: 8px;
   --radius-lg: 28px;
-  --shadow:    0 1px 2px color-mix(in srgb, #1C1917 14%, transparent);
-  --shadow-lg: 0 12px 32px color-mix(in srgb, #1C1917 22%, transparent);
+  --shadow:    0 1px 2px color-mix(in srgb, #0D2026 15%, transparent);
+  --shadow-lg: 0 12px 32px color-mix(in srgb, #0D2026 22%, transparent);
   --dur:       200ms;
   --ease-out:  cubic-bezier(.2,.8,.3,1);
 
@@ -76,43 +76,43 @@
   --shell-max: 480px;
 }
 
-/* ---------- Tokens: dark (Orange & White — lifted/desaturated, not inverted) ---------- */
+/* ---------- Tokens: dark (lifted/desaturated, not inverted) ---------- */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --brand:        #FB923C;  /* orange-400, lifted + desaturated, not inverted */
-    --brand-dark:   #FDBA74;  /* orange-300, hover/active */
-    --brand-tint:   #431407;
-    --brand-tint-2: #7C2D12;
-    --on-brand:     #431407;
+    --brand:        #4FC9D6;
+    --brand-dark:   #86E0E8;  /* hover goes lighter in dark mode */
+    --brand-tint:   #06333A;
+    --brand-tint-2: #0B4A54;
+    --on-brand:     #042227;
 
-    --bg:         #1C1917;
-    --surface:    #292524;   /* cards lift lighter than the page in dark mode */
-    --surface-2:  #3A3532;
-    --fg:         #FAFAF9;
-    --fg-muted:   #D6D3D1;   /* solid, not color-mix — see the light-mode note */
-    --border:     color-mix(in srgb, #FAFAF9 18%, transparent);  /* hairline only, no contrast floor */
-    --border-strong: #A8A29E;
+    --bg:         #0B1A1E;
+    --surface:    #12262B;   /* cards lift lighter than the page in dark mode */
+    --surface-2:  #1C363D;
+    --fg:         #EDF7F8;
+    --fg-muted:   #A6C2C8;
+    --border:     color-mix(in srgb, #EDF7F8 18%, transparent);  /* hairline only, no contrast floor */
+    --border-strong: #78969E;
 
-    --ok:        #4ADE80;  --ok-tint:     #14532D;
-    --warn:      #FACC15;  --warn-tint:   #422006;
-    --danger:    #F87171;  --danger-tint: #450A0A;
+    --ok:        #A8D24E;  --ok-tint:     #20330A;
+    --warn:      #F0B429;  --warn-tint:   #3B2607;
+    --danger:    #FF8A8F;  --danger-tint: #421013;
 
-    --shadow:    0 1px 2px rgba(0,0,0,.4), 0 4px 12px rgba(0,0,0,.35);
-    --shadow-lg: 0 2px 6px rgba(0,0,0,.45), 0 12px 28px rgba(0,0,0,.5);
+    --shadow:    0 1px 2px rgba(0,0,0,.45), 0 4px 12px rgba(0,0,0,.38);
+    --shadow-lg: 0 2px 6px rgba(0,0,0,.5), 0 12px 28px rgba(0,0,0,.55);
   }
 }
 :root[data-theme="dark"] {
-  --brand: #FB923C; --brand-dark: #FDBA74; --brand-tint: #431407;
-  --brand-tint-2: #7C2D12; --on-brand: #431407;
-  --bg: #1C1917; --surface: #292524; --surface-2: #3A3532;
-  --fg: #FAFAF9; --fg-muted: #D6D3D1;
-  --border: color-mix(in srgb, #FAFAF9 18%, transparent);
-  --border-strong: #A8A29E;
-  --ok: #4ADE80; --ok-tint: #14532D;
-  --warn: #FACC15; --warn-tint: #422006;
-  --danger: #F87171; --danger-tint: #450A0A;
-  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 12px rgba(0,0,0,.35);
-  --shadow-lg: 0 2px 6px rgba(0,0,0,.45), 0 12px 28px rgba(0,0,0,.5);
+  --brand: #4FC9D6; --brand-dark: #86E0E8; --brand-tint: #06333A;
+  --brand-tint-2: #0B4A54; --on-brand: #042227;
+  --bg: #0B1A1E; --surface: #12262B; --surface-2: #1C363D;
+  --fg: #EDF7F8; --fg-muted: #A6C2C8;
+  --border: color-mix(in srgb, #EDF7F8 18%, transparent);
+  --border-strong: #78969E;
+  --ok: #A8D24E; --ok-tint: #20330A;
+  --warn: #F0B429; --warn-tint: #3B2607;
+  --danger: #FF8A8F; --danger-tint: #421013;
+  --shadow: 0 1px 2px rgba(0,0,0,.45), 0 4px 12px rgba(0,0,0,.38);
+  --shadow-lg: 0 2px 6px rgba(0,0,0,.5), 0 12px 28px rgba(0,0,0,.55);
 }
 
 /* ---------- Reset ---------- */
@@ -195,7 +195,7 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
   position: sticky; top: 0; z-index: var(--z-nav);
   height: calc(100px + env(safe-area-inset-top));
   overflow: hidden;
-  border-bottom: 3px solid var(--brand);  /* echoes the real building's own orange facade band */
+  border-bottom: 3px solid var(--brand);
 }
 .app-header__photo {
   position: absolute; inset: 0;
@@ -205,7 +205,7 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
 .app-header__scrim {
   position: absolute; inset: 0;
   background: linear-gradient(180deg,
-    rgba(20,12,4,.12) 0%, rgba(20,12,4,.38) 60%, rgba(20,12,4,.74) 100%);
+    rgba(3,30,36,.20) 0%, rgba(3,30,36,.55) 60%, rgba(3,30,36,.82) 100%);
 }
 .app-header__row {
   position: relative; z-index: 1;
@@ -244,14 +244,14 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
   display: grid; place-items: center;
   border-radius: 50%;
   border: 1px solid rgba(255,255,255,.4);
-  background: rgba(20,12,4,.34);
+  background: rgba(3,30,36,.38);
   backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
   color: #FFFFFF;
   box-shadow: 0 1px 3px rgba(0,0,0,.3);
   transition: background var(--dur) var(--ease-out), transform 120ms var(--ease-out);
   touch-action: manipulation;
 }
-.app-header__gear:hover { background: rgba(20,12,4,.5); }
+.app-header__gear:hover { background: rgba(3,30,36,.55); }
 .app-header__gear:active { transform: scale(.94); }
 .app-header__gear svg { width: 26px; height: 26px; }
 
@@ -295,6 +295,7 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
 
 /* ---------- Status card: the single most important element ---------- */
 .status {
+  position: relative; overflow: hidden;
   border-radius: var(--radius-lg);
   padding: var(--s-5) var(--s-4);
   text-align: center;
@@ -306,6 +307,22 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
 .status--warn   { background: var(--warn-tint);   border-color: var(--warn);   }
 .status--danger { background: var(--danger-tint); border-color: var(--danger); }
 .status--empty  { background: var(--surface);     border-color: var(--border); border-style: dashed; }
+
+/* Soft tone-tinted glow behind the number — decorative only, so it sits
+   behind everything (z-index:0) and content is lifted above it. */
+.status::before {
+  content: ""; position: absolute; z-index: 0;
+  top: -46%; left: 50%; transform: translateX(-50%);
+  width: 280px; height: 280px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--brand) 20%, transparent), transparent 70%);
+}
+.status--ok::before     { background: radial-gradient(circle, color-mix(in srgb, var(--ok) 20%, transparent), transparent 70%); }
+.status--warn::before   { background: radial-gradient(circle, color-mix(in srgb, var(--warn) 22%, transparent), transparent 70%); }
+.status--danger::before { background: radial-gradient(circle, color-mix(in srgb, var(--danger) 26%, transparent), transparent 70%); }
+.status > * { position: relative; z-index: 1; }
+
+@keyframes badgePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+.status--danger .status__badge svg { animation: badgePulse 1.8s ease-in-out infinite; }
 
 .status__badge {
   display: inline-flex; align-items: center; gap: var(--s-2);
@@ -353,10 +370,12 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
   height: 100%; border-radius: 999px;
   transition: width 400ms var(--ease-out);
 }
-.meter--ok     .meter__fill { background: var(--ok); }
-.meter--warn   .meter__fill { background: var(--warn); }
-.meter--danger .meter__fill { background: var(--danger); }
-.meter--brand  .meter__fill { background: var(--brand); }  /* progress, not a clinical band */
+/* Tone-tinted glow on the fill — shadow color always matches the fill's
+   own hue, never a generic neon glow (see design guardrails). */
+.meter--ok     .meter__fill { background: linear-gradient(90deg, var(--ok), color-mix(in srgb, var(--ok) 65%, white)); box-shadow: 0 0 10px color-mix(in srgb, var(--ok) 50%, transparent); }
+.meter--warn   .meter__fill { background: linear-gradient(90deg, var(--warn), color-mix(in srgb, var(--warn) 65%, white)); box-shadow: 0 0 10px color-mix(in srgb, var(--warn) 50%, transparent); }
+.meter--danger .meter__fill { background: linear-gradient(90deg, var(--danger), color-mix(in srgb, var(--danger) 65%, white)); box-shadow: 0 0 10px color-mix(in srgb, var(--danger) 50%, transparent); }
+.meter--brand  .meter__fill { background: linear-gradient(90deg, var(--brand), var(--brand-dark)); box-shadow: 0 0 10px color-mix(in srgb, var(--brand) 40%, transparent); }  /* progress, not a clinical band */
 .meter__scale {
   display: flex; justify-content: space-between;
   font-size: var(--t-xs); color: var(--fg-muted); margin-top: var(--s-2);
@@ -434,7 +453,7 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
               transform 120ms var(--ease-out);
   touch-action: manipulation;
 }
-.reminder:hover { border-color: var(--border-strong); background: var(--surface-2); }
+.reminder:hover { border-color: var(--border-strong); background: var(--surface-2); transform: translateY(-2px); }
 .reminder:active { transform: scale(.98); }
 .reminder__icon {
   width: 44px; height: 44px; flex: 0 0 44px; border-radius: 12px;
@@ -450,6 +469,26 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
 .reminder__sub { display: block; font-size: var(--t-xs); color: var(--fg-muted); margin-top: 2px; }
 .reminder__chev { width: 20px; height: 20px; flex: 0 0 20px; color: var(--fg-muted); }
 
+/* ---------- Today bento tiles: Fluid + Weight, side by side ----------
+   Same [data-go] hand-off as .reminder, just laid out as a compact
+   vertical tile instead of a full-width row, so the two glanced-at-most
+   numbers on Today read as a pair rather than two rows in a long list. */
+.today-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); margin-bottom: var(--s-3); }
+.reminder--tile {
+  flex-direction: column; align-items: flex-start; justify-content: flex-start;
+  min-height: 136px; gap: var(--s-1); margin-bottom: 0;
+  position: relative; overflow: hidden;
+}
+.reminder--tile::before {
+  content: ""; position: absolute; z-index: 0;
+  top: -34%; right: -22%; width: 140px; height: 140px; border-radius: 50%;
+  background: radial-gradient(circle, var(--brand-tint-2), transparent 70%);
+  opacity: .7; pointer-events: none;
+}
+.reminder--tile > * { position: relative; z-index: 1; }
+.reminder--tile .reminder__icon { width: 40px; height: 40px; flex: 0 0 40px; margin-bottom: var(--s-1); }
+.reminder--tile .reminder__big { font-family: Caprasimo, sans-serif; font-size: var(--t-xl); font-weight: 400; margin-top: 4px; }
+
 /* Today's trend cards — .card as a full-width tappable button, same
    hand-off pattern as .reminder above but chart-shaped. */
 .chart-card {
@@ -460,8 +499,23 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
               transform 120ms var(--ease-out);
   touch-action: manipulation;
 }
-.chart-card:hover { border-color: var(--border-strong); background: var(--surface-2); }
+.chart-card:hover { border-color: var(--border-strong); background: var(--surface-2); transform: translateY(-2px); }
 .chart-card:active { transform: scale(.98); }
+
+/* ---------- Today dashboard: staggered entrance ----------
+   Each direct child (nudge banner, status, bento tiles, next-HD row,
+   calendar, trends) fades/slides up in sequence instead of the whole
+   view appearing flat at once. */
+.view--today > * { opacity: 0; animation: cardUp 520ms var(--ease-out) forwards; }
+@keyframes cardUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.view--today > *:nth-child(1) { animation-delay:  20ms; }
+.view--today > *:nth-child(2) { animation-delay:  80ms; }
+.view--today > *:nth-child(3) { animation-delay: 140ms; }
+.view--today > *:nth-child(4) { animation-delay: 200ms; }
+.view--today > *:nth-child(5) { animation-delay: 260ms; }
+.view--today > *:nth-child(6) { animation-delay: 320ms; }
+.view--today > *:nth-child(7) { animation-delay: 380ms; }
+.view--today > *:nth-child(8) { animation-delay: 440ms; }
 
 /* ---------- List rows ---------- */
 .row {
@@ -651,7 +705,7 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
 }
 .med-check-btn svg, .med-check-btn .icon { width: 22px; height: 22px; }
 .med-row--taken .med-check-btn {
-  background: var(--ok); border-color: var(--ok); color: #fff;
+  background: var(--ok); border-color: var(--ok); color: var(--on-brand);
 }
 
 .chk-item {
@@ -667,7 +721,7 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
   flex: 0 0 26px; overflow: hidden;
 }
 .chk-box svg, .chk-box .icon { width: 18px; height: 18px; }
-.chk-item--done .chk-box { background: var(--brand); border-color: var(--brand); color: #fff; }
+.chk-item--done .chk-box { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
 
 .form-group { margin-bottom: var(--s-4); }
 .form-group label { display: block; font-weight: 700; font-size: var(--t-sm); margin-bottom: var(--s-1); }

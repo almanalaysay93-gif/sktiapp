@@ -140,7 +140,7 @@ export function runCalendarTests() {
 
   test('every event has a UID and a DTSTAMP', () => {
     const ics = sched();
-    match(ics, /UID:[^\r\n]+@skti-tubig\.local/);
+    match(ics, /UID:[^\r\n]+@sktidvo\.local/);
     match(ics, /DTSTAMP:\d{8}T\d{6}Z/);
   });
 

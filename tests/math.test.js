@@ -380,7 +380,7 @@ export function runMathTests() {
     test('import drops readings with impossible numbers', () => {
       reset();
       const counts = S.importAll({
-        app: 'skti-tubig', version: 1,
+        app: 'sktidvo', version: 1,
         profile: {}, weights: [], intake: [], sessions: [],
         hdBp: [
           { day: '2026-07-27', sys: 120, dia: 80 },       // good
@@ -448,7 +448,7 @@ export function runMathTests() {
       S.logIntake(250, 'fluid.glass');
       S.logSession({ postKg: 62.5 });
       const dump = S.exportAll();
-      eq(dump.app, 'skti-tubig');
+      eq(dump.app, 'sktidvo');
       eq(dump.weights.length, 1);
       eq(dump.intake.length, 1);
       eq(dump.sessions.length, 1);
@@ -472,13 +472,13 @@ export function runMathTests() {
       reset();
       throws(() => S.importAll({ app: 'something-else', version: 1 }));
       throws(() => S.importAll(null));
-      throws(() => S.importAll({ app: 'skti-tubig', version: 99 }));
+      throws(() => S.importAll({ app: 'sktidvo', version: 99 }));
     });
 
     test('junk records are dropped, good ones kept', () => {
       reset();
       const counts = S.importAll({
-        app: 'skti-tubig', version: 1,
+        app: 'sktidvo', version: 1,
         profile: { dryWeightKg: 60 },
         weights: [
           { day: '2026-07-27', kg: 64 },
@@ -497,7 +497,7 @@ export function runMathTests() {
     test('import cannot smuggle in unknown profile fields', () => {
       reset();
       S.importAll({
-        app: 'skti-tubig', version: 1,
+        app: 'sktidvo', version: 1,
         profile: { dryWeightKg: 60, schedule: 'XYZ', lang: 'fr', evil: true },
         weights: [], intake: [], sessions: []
       });

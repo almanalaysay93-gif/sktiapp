@@ -5,7 +5,7 @@
    Bump CACHE on every release or patients keep the old shell.
    =================================================================== */
 
-const CACHE = 'skti-tubig-v23';
+const CACHE = 'sktidvo-v4';
 
 const SHELL = [
   './',

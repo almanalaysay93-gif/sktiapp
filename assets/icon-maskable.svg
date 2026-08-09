@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img"
-     aria-label="SKTI Patient Profile">
+     aria-label="SKTIDVO">
   <!-- Maskable: artwork kept inside the 80% safe zone so Android's mask
        (circle / squircle / teardrop) never clips the droplet. -->
-  <rect width="512" height="512" fill="#C2410C"/>
+  <rect width="512" height="512" fill="#0B6E78"/>
   <path d="M256 160 L332 236a107 107 0 1 1-152 0Z"
-        fill="none" stroke="#FFF7ED" stroke-width="24"
+        fill="none" stroke="#DFF2F4" stroke-width="24"
         stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M212 303a44 44 0 0 0 44 44"
-        fill="none" stroke="#FDBA74" stroke-width="18" stroke-linecap="round"/>
+        fill="none" stroke="#3A7217" stroke-width="18" stroke-linecap="round"/>
 </svg>

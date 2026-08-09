@@ -502,7 +502,7 @@ export function wipeAll() {
    safety net that does not require a server.
    =================================================================== */
 
-export const EXPORT_APP = 'skti-tubig';
+export const EXPORT_APP = 'sktidvo';
 export const EXPORT_VERSION = 1;
 
 export function exportAll() {
@@ -521,7 +521,7 @@ export function exportAll() {
 }
 
 export function exportFilename() {
-  return `skti-tubig-backup-${dayKey()}.json`;
+  return `sktidvo-backup-${dayKey()}.json`;
 }
 
 const num = (v, fallback = null) => (Number.isFinite(Number(v)) ? Number(v) : fallback);
@@ -590,7 +590,7 @@ function cleanProfile(p) {
 /** Throws on a file that is not one of ours. Replaces everything on success. */
 export function importAll(data) {
   if (!data || typeof data !== 'object' || data.app !== EXPORT_APP) {
-    throw new Error('not a SKTI Tubig backup');
+    throw new Error('not a SKTIDVO backup');
   }
   if (!Number.isFinite(Number(data.version)) || Number(data.version) > EXPORT_VERSION) {
     throw new Error('backup made by a newer version');

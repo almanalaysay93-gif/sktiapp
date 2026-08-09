@@ -17,8 +17,8 @@
    =================================================================== */
 
 const CRLF = '\r\n';
-const PRODID = '-//SKTI Tubig//Fluid and Weight Tracker//EN';
-const UID_DOMAIN = 'skti-tubig.local';
+const PRODID = '-//SKTIDVO//Fluid and Weight Tracker//EN';
+const UID_DOMAIN = 'sktidvo.local';
 
 const pad = n => String(n).padStart(2, '0');
 
@@ -83,6 +83,12 @@ export function addMinutes(d, mins) {
 }
 
 const BYDAY = { MWF: 'MO,WE,FR', TTS: 'TU,TH,SA' };
+const DOW_CODE = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+
+const byDayFor = (schedule, customDays) =>
+  schedule === 'CUSTOM' && Array.isArray(customDays) && customDays.length
+    ? customDays.slice().sort().map(d => DOW_CODE[d]).join(',')
+    : BYDAY[schedule] || BYDAY.MWF;
 
 /* ---------- components ---------- */
 
@@ -139,7 +145,7 @@ export function wrapCalendar(eventLines) {
  * and it keeps the event readable if the calendar is shared.
  */
 export function scheduleIcs({
-  schedule = 'MWF', sessionTime = '08:00', durationMinutes = 240,
+  schedule = 'MWF', customDays = null, sessionTime = '08:00', durationMinutes = 240,
   summary = 'Dialysis — SKTI', description = '',
   alarmMinutesBefore = 120, alarmText = '', from = new Date(), stamp
 }) {
@@ -150,7 +156,7 @@ export function scheduleIcs({
     end: addMinutes(start, durationMinutes),
     summary,
     description,
-    rrule: `FREQ=WEEKLY;BYDAY=${BYDAY[schedule] || BYDAY.MWF}`,
+    rrule: `FREQ=WEEKLY;BYDAY=${byDayFor(schedule, customDays)}`,
     alarmMinutesBefore,
     alarmText,
     stamp
@@ -216,7 +222,7 @@ export function sessionsIcs({
 
 export function googleTemplateUrl({
   title = 'Dialysis — SKTI', start, durationMinutes = 240,
-  schedule = null, tz = 'Asia/Manila'
+  schedule = null, customDays = null, tz = 'Asia/Manila'
 }) {
   const end = addMinutes(start, durationMinutes);
   const params = new URLSearchParams({
@@ -226,7 +232,7 @@ export function googleTemplateUrl({
     ctz: tz
   });
   if (schedule) {
-    params.set('recur', `RRULE:FREQ=WEEKLY;BYDAY=${BYDAY[schedule] || BYDAY.MWF}`);
+    params.set('recur', `RRULE:FREQ=WEEKLY;BYDAY=${byDayFor(schedule, customDays)}`);
   }
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }

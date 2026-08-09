@@ -530,7 +530,16 @@ function nextHdLabel() {
     [data-go] handling. `big` may carry pre-built markup (tnum spans),
     so it is not escaped here; callers are responsible for esc()ing any
     raw text before interpolating it in. */
-function reminderCard({ go, iconName, tone, title, big, sub }) {
+function reminderCard({ go, iconName, tone, title, big, sub, tile = false }) {
+  if (tile) {
+    return `
+    <button type="button" class="reminder reminder--tile" data-go="${go}">
+      <span class="reminder__icon${tone ? ` reminder__icon--${tone}` : ''}">${icon(iconName)}</span>
+      <span class="reminder__title">${esc(title)}</span>
+      <span class="reminder__big">${big}</span>
+      ${sub ? `<span class="reminder__sub">${esc(sub)}</span>` : ''}
+    </button>`;
+  }
   return `
   <button type="button" class="reminder" data-go="${go}">
     <span class="reminder__icon${tone ? ` reminder__icon--${tone}` : ''}">${icon(iconName)}</span>
@@ -550,7 +559,7 @@ function fluidReminder() {
     return reminderCard({
       go: 'fluid', iconName: 'droplet', title: t('fluid.title'),
       big: `${consumed}<small style="font-size:var(--t-sm);font-weight:600;color:var(--fg-muted)"> ${esc(t('common.ml'))}</small>`,
-      sub: t('fluid.logTitle')
+      sub: t('fluid.logTitle'), tile: true
     });
   }
   const over = left < 0;
@@ -560,7 +569,8 @@ function fluidReminder() {
     title: t('fluid.title'),
     big: `${consumed}<small style="font-size:var(--t-sm);font-weight:600;color:var(--fg-muted)"> / ${S.getProfile().allowanceMl} ${esc(t('common.ml'))}</small>`,
     sub: over ? t('fluid.noneLeft')
-              : `${glasses} ${esc(glassWord(glasses))}`
+              : `${glasses} ${esc(glassWord(glasses))}`,
+    tile: true
   });
 }
 
@@ -572,7 +582,8 @@ function weightReminder() {
     big: w
       ? `${nf(w.kg, 1)}<small style="font-size:var(--t-sm);font-weight:600;color:var(--fg-muted)"> ${esc(t('common.kg'))}</small>`
       : `<span style="font-size:var(--t-md);color:var(--fg-muted)">—</span>`,
-    sub: w ? undefined : t('reminder.notWeighedYet')
+    sub: w ? undefined : t('reminder.notWeighedYet'),
+    tile: true
   });
 }
 
@@ -764,11 +775,13 @@ function viewToday() {
   // including its own "weigh in today" empty state.
   const status = S.lastSession() ? statusCard() : '';
   return `
-  <div class="view">
+  <div class="view view--today">
     ${nudge}
     ${status}
-    ${fluidReminder()}
-    ${weightReminder()}
+    <div class="today-grid-2">
+      ${fluidReminder()}
+      ${weightReminder()}
+    </div>
     ${nextHdReminder()}
     ${calendarCard()}
     ${trendsSection()}
@@ -1147,7 +1160,17 @@ function viewSettings() {
         <div class="seg" role="group" aria-label="${esc(t('settings.schedule'))}">
           <button type="button" data-sched="MWF" aria-pressed="${p.schedule === 'MWF'}">MWF</button>
           <button type="button" data-sched="TTS" aria-pressed="${p.schedule === 'TTS'}">TTS</button>
+          <button type="button" data-sched="CUSTOM" aria-pressed="${p.schedule === 'CUSTOM'}">${esc(t('settings.scheduleCustom'))}</button>
         </div>
+        ${p.schedule === 'CUSTOM' ? `
+        <p class="hint">${esc(t('settings.scheduleCustomHint'))}</p>
+        <div class="seg" role="group" aria-label="${esc(t('settings.scheduleCustom'))}">
+          ${[0, 1, 2, 3, 4, 5, 6].map(dow => `
+            <button type="button" data-custom-day="${dow}"
+                    aria-pressed="${(p.customDays || []).includes(dow)}">${
+              esc(new Intl.DateTimeFormat(localeTag(), { weekday: 'narrow' }).format(new Date(2023, 0, 1 + dow)))
+            }</button>`).join('')}
+        </div>` : ''}
       </div>
       <button type="button" class="btn btn--primary" id="pSave">
         ${icon('check')}<span>${esc(t('common.save'))}</span>
@@ -1347,8 +1370,9 @@ function calFile(name, text) {
 
 function calSchedule() {
   const p = S.getProfile();
-  calFile('skti-dialysis-schedule.ics', Cal.scheduleIcs({
+  calFile('sktidvo-dialysis-schedule.ics', Cal.scheduleIcs({
     schedule: p.schedule,
+    customDays: p.customDays,
     sessionTime: p.sessionTime,
     summary: t('cal.evDialysis'),
     alarmMinutesBefore: 120,
@@ -1359,7 +1383,7 @@ function calSchedule() {
 
 function calWeighIn() {
   const p = S.getProfile();
-  calFile('skti-weigh-in.ics', Cal.weighInIcs({
+  calFile('sktidvo-weigh-in.ics', Cal.weighInIcs({
     weighTime: p.weighTime,
     summary: t('cal.evWeigh'),
     description: t('cal.evWeighNote'),
@@ -1372,7 +1396,7 @@ function calSessions() {
   const sessions = S.getSessions();
   if (!sessions.length) { toast(t('cal.noSessions')); return; }
   const p = S.getProfile();
-  calFile('skti-dialysis-log.ics', Cal.sessionsIcs({
+  calFile('sktidvo-dialysis-log.ics', Cal.sessionsIcs({
     sessions,
     sessionTime: p.sessionTime,
     summary: t('cal.evDialysis'),
@@ -1389,7 +1413,8 @@ function calOpenGoogle() {
   const url = Cal.googleTemplateUrl({
     title: t('cal.evDialysis'),
     start: Cal.atTime(next, p.sessionTime),
-    schedule: p.schedule
+    schedule: p.schedule,
+    customDays: p.customDays
   });
   window.open(url, '_blank', 'noopener');
 }
@@ -1494,7 +1519,7 @@ function render() {
 }
 
 function onClick(e) {
-  const el = e.target.closest('[data-go],[data-ml],[data-lang],[data-sched],[data-theme-set],' +
+  const el = e.target.closest('[data-go],[data-ml],[data-lang],[data-sched],[data-custom-day],[data-theme-set],' +
     '[data-del-intake],[data-del-weight],[data-del-session],[data-empty-action],' +
     '[data-toggle-med],[data-edit-med],[data-toggle-chk],[data-del-hdbp],[data-cal-nav],' +
     '#btnWeigh,#btnSession,#btnSettings,#btnAddMed,#btnLogHdBp,#pSave,#btnPrint,#btnWipe,' +
@@ -1553,6 +1578,12 @@ function onClick(e) {
   }
 
   if (el.dataset.sched)     return S.saveProfile({ schedule: el.dataset.sched });
+  if (el.dataset.customDay !== undefined) {
+    const dow = Number(el.dataset.customDay);
+    const days = new Set(S.getProfile().customDays || []);
+    days.has(dow) ? days.delete(dow) : days.add(dow);
+    return S.saveProfile({ schedule: 'CUSTOM', customDays: [...days].sort() });
+  }
   if (el.dataset.themeSet)  { applyTheme(el.dataset.themeSet); return S.saveProfile({ theme: el.dataset.themeSet }); }
 
   if (el.dataset.delIntake) {
