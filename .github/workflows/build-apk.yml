@@ -32,6 +32,8 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - uses: android-actions/setup-android@v3
+
       - name: Point Gradle at the runner's Android SDK
         run: echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 
@@ -40,7 +42,22 @@ jobs:
 
       - name: Build debug APK
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee ../build.log
+        continue-on-error: true
+        id: build
+
+      - name: Surface build log (public, no login needed)
+        run: |
+          {
+            echo "## Gradle build log (last 200 lines)"
+            echo '```'
+            tail -n 200 build.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail job if build actually failed
+        if: steps.build.outcome == 'failure'
+        run: exit 1
 
       - name: Rename APK
         run: cp android/app/build/outputs/apk/debug/app-debug.apk SKTIDVO-debug.apk
