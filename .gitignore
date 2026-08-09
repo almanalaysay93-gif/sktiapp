@@ -1,2 +1,11 @@
 .DS_Store
 Thumbs.db
+node_modules/
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/.idea/
+android/captures/
+android/*.iml
+android/app/*.iml

@@ -1,0 +1,808 @@
+/* ===================================================================
+   SKTIDVO Fluid & Weight Tracker — design tokens + components
+   Palette: SKTI teal/green, sourced from the SKTI Kidney & Transplant
+   Institute seal (deep vessel teal + institute green), replacing the
+   prior orange system. Token NAMES are unchanged, so every component
+   below still targets the same custom properties.
+   Brand is deliberately LOW-chroma (institutional ink); every clinical
+   band (ok/warn/danger) is hue- AND chroma-separated from it so a
+   deuteranope (elevated prevalence in this patient cohort) never reads
+   brand chrome as a clinical signal — verified pairwise below. Teal
+   must never be used inside .status/.meter as a band color; those stay
+   ok/warn/danger only.
+   Base font 18px: users skew elderly.
+   =================================================================== */
+
+/* ---------- Tokens: light (SKTI Teal & White) ---------- */
+:root {
+  /* Brand: seal's vessel teal (#0E7C86), deepened one step so
+     --on-brand white clears 5.97:1 instead of the raw hex's 4.95:1. */
+  --brand:        #0B6E78;
+  --brand-dark:   #075158;  /* hover/active */
+  --brand-tint:   #DFF2F4;
+  --brand-tint-2: #BCE5EA;
+  --on-brand:     #FFFFFF;
+
+  /* Surfaces — true white page; cards carry a faint teal cast so they
+     recede a shade from --bg without going grey. */
+  --bg:         #FFFFFF;
+  --surface:    #F2F9FA;
+  --surface-2:  #FFFFFF;   /* lifted chip tone — segmented controls, hover */
+  --fg:         #0D2026;   /* teal-black, ties to the seal's navy ring */
+  --fg-muted:   #3F5C65;   /* 7.17:1 on white — elderly-tuned margin above the 4.5:1 floor */
+  --border:     color-mix(in srgb, #0D2026 16%, transparent);  /* hairline only, no contrast floor */
+  --border-strong: #5E7B84;   /* component boundaries, WCAG 1.4.11 */
+
+  /* Semantic status — hue AND chroma separated from brand (69.8deg hue,
+     1.6-2.1x brand's chroma) so the signal survives full color
+     blindness even though brand and ok sit in the same green/teal
+     family. See the collision note above. */
+  --ok:        #3A7217;
+  --ok-tint:   #E8F5D6;
+  --warn:      #8A4B00;
+  --warn-tint: #FBEFD6;
+  --danger:    #A81D24;
+  --danger-tint: #FBE4E4;
+
+  /* Shape + motion */
+  --radius:    16px;
+  --radius-sm: 8px;
+  --radius-lg: 28px;
+  --shadow:    0 1px 2px color-mix(in srgb, #0D2026 15%, transparent);
+  --shadow-lg: 0 12px 32px color-mix(in srgb, #0D2026 22%, transparent);
+  --dur:       200ms;
+  --ease-out:  cubic-bezier(.2,.8,.3,1);
+
+  /* Type scale — base is 18px, one step up from the usual 16px. Kept at
+     this scale (not Organic's 15px default): the larger elderly-tuned
+     scale is a harder constraint than the reference's own body size. */
+  --t-xs:  0.833rem;   /* 15px  — captions only */
+  --t-sm:  0.944rem;   /* 17px */
+  --t-md:  1rem;       /* 18px  — body */
+  --t-lg:  1.222rem;   /* 22px */
+  --t-xl:  1.556rem;   /* 28px */
+  --t-2xl: 2rem;       /* 36px */
+  --t-hero:3.111rem;   /* 56px  — the one number that matters */
+
+  /* Spacing — 4/8 rhythm, kept at the elderly-tuned scale (not Organic's
+     denser 4.4px rhythm, which is tuned to its own smaller type). */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+  --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px;
+
+  /* Layering */
+  --z-nav: 40; --z-sheet: 100; --z-scrim: 90; --z-toast: 200;
+
+  --tap: 56px;         /* touch target. 44 is the floor; elderly get 56. */
+  --shell-max: 480px;
+}
+
+/* ---------- Tokens: dark (lifted/desaturated, not inverted) ---------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --brand:        #4FC9D6;
+    --brand-dark:   #86E0E8;  /* hover goes lighter in dark mode */
+    --brand-tint:   #06333A;
+    --brand-tint-2: #0B4A54;
+    --on-brand:     #042227;
+
+    --bg:         #0B1A1E;
+    --surface:    #12262B;   /* cards lift lighter than the page in dark mode */
+    --surface-2:  #1C363D;
+    --fg:         #EDF7F8;
+    --fg-muted:   #A6C2C8;
+    --border:     color-mix(in srgb, #EDF7F8 18%, transparent);  /* hairline only, no contrast floor */
+    --border-strong: #78969E;
+
+    --ok:        #A8D24E;  --ok-tint:     #20330A;
+    --warn:      #F0B429;  --warn-tint:   #3B2607;
+    --danger:    #FF8A8F;  --danger-tint: #421013;
+
+    --shadow:    0 1px 2px rgba(0,0,0,.45), 0 4px 12px rgba(0,0,0,.38);
+    --shadow-lg: 0 2px 6px rgba(0,0,0,.5), 0 12px 28px rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="dark"] {
+  --brand: #4FC9D6; --brand-dark: #86E0E8; --brand-tint: #06333A;
+  --brand-tint-2: #0B4A54; --on-brand: #042227;
+  --bg: #0B1A1E; --surface: #12262B; --surface-2: #1C363D;
+  --fg: #EDF7F8; --fg-muted: #A6C2C8;
+  --border: color-mix(in srgb, #EDF7F8 18%, transparent);
+  --border-strong: #78969E;
+  --ok: #A8D24E; --ok-tint: #20330A;
+  --warn: #F0B429; --warn-tint: #3B2607;
+  --danger: #FF8A8F; --danger-tint: #421013;
+  --shadow: 0 1px 2px rgba(0,0,0,.45), 0 4px 12px rgba(0,0,0,.38);
+  --shadow-lg: 0 2px 6px rgba(0,0,0,.5), 0 12px 28px rgba(0,0,0,.55);
+}
+
+/* ---------- Reset ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-size: var(--t-md);
+  line-height: 1.55;
+  /* System stack first so the app still reads correctly with no network.
+     Figtree is a progressive enhancement — see index.html. */
+  font-family: Figtree, -apple-system, BlinkMacSystemFont, "Segoe UI",
+               Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--fg);
+  background: var(--bg);
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+h1, h2, h3 {
+  /* Caprasimo is a rounded display face with no close system match, so
+     the fallback is a plain sans rather than a pretend-lookalike. */
+  font-family: Caprasimo, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: -.01em;
+  margin: 0;
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+ul { list-style: none; margin: 0; padding: 0; }
+svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+/* Numbers must not jitter as they change. */
+.tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+
+/* ---------- Focus ---------- */
+:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+.skip-link {
+  position: absolute; left: var(--s-3); top: -100px;
+  background: var(--brand); color: var(--on-brand);
+  padding: var(--s-3) var(--s-4); border-radius: var(--radius-sm);
+  z-index: var(--z-toast); font-weight: 600;
+  transition: top var(--dur) var(--ease-out);
+}
+.skip-link:focus { top: var(--s-3); }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ---------- Shell ---------- */
+.shell {
+  max-width: var(--shell-max);
+  margin: 0 auto;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+@media (min-width: 900px) {
+  .shell { box-shadow: var(--shadow-lg); }
+}
+
+/* ---------- App header ----------
+   Sticky so the gear and the SKTI identity stay reachable while content
+   scrolls underneath — the same contract the old empty gearbar made.
+   Photo and logo are sized with position:absolute + inset (not percentage
+   width/height on a place-items:center child) on purpose: the previous
+   .brand__mark used width/height:100% inside a `display:grid;
+   place-items:center` box, and percentage sizing there resolves against
+   the item's own auto height rather than the grid track in some engines
+   — the seal quietly grew past its 48px box and overflow:hidden clipped
+   the bottom of it. inset:0 pins the box to the parent's padding edges
+   directly, so there's no ambiguous percentage to resolve. */
+.app-header {
+  position: sticky; top: 0; z-index: var(--z-nav);
+  height: calc(100px + env(safe-area-inset-top));
+  overflow: hidden;
+  border-bottom: 3px solid var(--brand);
+}
+.app-header__photo {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: center 42%;
+}
+.app-header__scrim {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg,
+    rgba(3,30,36,.20) 0%, rgba(3,30,36,.55) 60%, rgba(3,30,36,.82) 100%);
+}
+.app-header__row {
+  position: relative; z-index: 1;
+  height: 100%;
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: max(env(safe-area-inset-top), var(--s-2)) var(--s-4) 0;
+}
+.app-header__badge {
+  position: relative; flex: 0 0 48px;
+  width: 48px; height: 48px;
+  border-radius: 50%; background: #FFFFFF;
+  box-shadow: var(--shadow); overflow: hidden;
+}
+.app-header__badge img {
+  position: absolute; inset: 3px;
+  width: calc(100% - 6px); height: calc(100% - 6px);
+  object-fit: contain;
+}
+/* Name/sub are fixed light values, not theme tokens — they sit on a photo
+   with a dark scrim, not on --surface, so light/dark mode doesn't apply. */
+.app-header__title {
+  flex: 1 1 auto; min-width: 0; margin: 0;
+  font-size: var(--t-md); font-weight: 400; line-height: 1.2;
+  color: #FFFFFF; text-shadow: 0 1px 3px rgba(0,0,0,.45);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.app-header__sub {
+  display: block; margin-top: 2px;
+  font-family: Figtree, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: var(--t-xs); font-weight: 500; letter-spacing: .01em;
+  color: rgba(255,255,255,.88); text-shadow: 0 1px 2px rgba(0,0,0,.4);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.app-header__gear {
+  flex: 0 0 var(--tap); width: var(--tap); height: var(--tap);
+  display: grid; place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.4);
+  background: rgba(3,30,36,.38);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  color: #FFFFFF;
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  transition: background var(--dur) var(--ease-out), transform 120ms var(--ease-out);
+  touch-action: manipulation;
+}
+.app-header__gear:hover { background: rgba(3,30,36,.55); }
+.app-header__gear:active { transform: scale(.94); }
+.app-header__gear svg { width: 26px; height: 26px; }
+
+/* ---------- Main ---------- */
+.main {
+  flex: 1;
+  /* Content clears the gear rather than tucking under it: the first card
+     is often the status card, and a button clipping its border reads as
+     a rendering fault. */
+  padding: var(--s-1) var(--s-4) calc(var(--tap) + var(--s-8) + env(safe-area-inset-bottom));
+}
+.view { animation: viewIn var(--dur) var(--ease-out); }
+@keyframes viewIn { from { opacity: 0; transform: translateY(6px); } }
+
+.section-title {
+  font-size: var(--t-sm); font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--fg-muted);
+  margin: var(--s-5) 0 var(--s-3);
+}
+.section-title:first-child { margin-top: 0; }
+
+/* Logo, name and building photo already live in .app-header — this is
+   just the one-line attribution, not a second brand block. */
+.settings-intro {
+  margin: 0 0 var(--s-2);
+  font-size: var(--t-sm); color: var(--fg-muted); text-align: center;
+}
+
+/* ---------- Card ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--s-4);
+  box-shadow: var(--shadow);
+  margin-bottom: var(--s-4);
+}
+.card__head { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-3); }
+.card__head h2 { font-size: var(--t-lg); }
+.card__head svg { width: 24px; height: 24px; flex: 0 0 24px; color: var(--brand); }
+
+/* ---------- Status card: the single most important element ---------- */
+.status {
+  position: relative; overflow: hidden;
+  border-radius: var(--radius-lg);
+  padding: var(--s-5) var(--s-4);
+  text-align: center;
+  border: 2px solid;
+  margin-bottom: var(--s-4);
+  box-shadow: var(--shadow);
+}
+.status--ok     { background: var(--ok-tint);     border-color: var(--ok);     }
+.status--warn   { background: var(--warn-tint);   border-color: var(--warn);   }
+.status--danger { background: var(--danger-tint); border-color: var(--danger); }
+.status--empty  { background: var(--surface);     border-color: var(--border); border-style: dashed; }
+
+/* Soft tone-tinted glow behind the number — decorative only, so it sits
+   behind everything (z-index:0) and content is lifted above it. */
+.status::before {
+  content: ""; position: absolute; z-index: 0;
+  top: -46%; left: 50%; transform: translateX(-50%);
+  width: 280px; height: 280px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--brand) 20%, transparent), transparent 70%);
+}
+.status--ok::before     { background: radial-gradient(circle, color-mix(in srgb, var(--ok) 20%, transparent), transparent 70%); }
+.status--warn::before   { background: radial-gradient(circle, color-mix(in srgb, var(--warn) 22%, transparent), transparent 70%); }
+.status--danger::before { background: radial-gradient(circle, color-mix(in srgb, var(--danger) 26%, transparent), transparent 70%); }
+.status > * { position: relative; z-index: 1; }
+
+@keyframes badgePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+.status--danger .status__badge svg { animation: badgePulse 1.8s ease-in-out infinite; }
+
+.status__badge {
+  display: inline-flex; align-items: center; gap: var(--s-2);
+  font-weight: 700; font-size: var(--t-sm);
+  text-transform: uppercase; letter-spacing: .05em;
+  padding: var(--s-2) var(--s-3);
+  border-radius: 999px;
+  background: var(--surface);
+  margin-bottom: var(--s-3);
+}
+.status__badge svg { width: 20px; height: 20px; }
+.status--ok     .status__badge { color: var(--ok); }
+.status--warn   .status__badge { color: var(--warn); }
+.status--danger .status__badge { color: var(--danger); }
+.status--empty  .status__badge { color: var(--fg-muted); }
+
+.status__num {
+  font-family: Caprasimo, sans-serif;
+  font-size: var(--t-hero); font-weight: 400; line-height: 1;
+  letter-spacing: -.01em;
+  display: block;
+}
+.status__unit { font-size: var(--t-lg); font-weight: 600; opacity: .8; }
+.status__label { font-size: var(--t-sm); color: var(--fg-muted); margin-top: var(--s-2); }
+.status__msg {
+  margin-top: var(--s-4); font-size: var(--t-lg); font-weight: 600;
+  line-height: 1.4; text-wrap: balance;
+}
+.status__advice {
+  margin-top: var(--s-3); font-size: var(--t-sm);
+  padding: var(--s-3); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--fg);
+  display: flex; gap: var(--s-2); align-items: flex-start; text-align: left;
+}
+.status__advice svg { width: 22px; height: 22px; flex: 0 0 22px; margin-top: 1px; }
+
+/* Progress meter under the status number */
+.meter { margin-top: var(--s-4); }
+.meter__track {
+  height: 14px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--border);
+  overflow: hidden;
+}
+.meter__fill {
+  height: 100%; border-radius: 999px;
+  transition: width 400ms var(--ease-out);
+}
+/* Tone-tinted glow on the fill — shadow color always matches the fill's
+   own hue, never a generic neon glow (see design guardrails). */
+.meter--ok     .meter__fill { background: linear-gradient(90deg, var(--ok), color-mix(in srgb, var(--ok) 65%, white)); box-shadow: 0 0 10px color-mix(in srgb, var(--ok) 50%, transparent); }
+.meter--warn   .meter__fill { background: linear-gradient(90deg, var(--warn), color-mix(in srgb, var(--warn) 65%, white)); box-shadow: 0 0 10px color-mix(in srgb, var(--warn) 50%, transparent); }
+.meter--danger .meter__fill { background: linear-gradient(90deg, var(--danger), color-mix(in srgb, var(--danger) 65%, white)); box-shadow: 0 0 10px color-mix(in srgb, var(--danger) 50%, transparent); }
+.meter--brand  .meter__fill { background: linear-gradient(90deg, var(--brand), var(--brand-dark)); box-shadow: 0 0 10px color-mix(in srgb, var(--brand) 40%, transparent); }  /* progress, not a clinical band */
+.meter__scale {
+  display: flex; justify-content: space-between;
+  font-size: var(--t-xs); color: var(--fg-muted); margin-top: var(--s-2);
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  min-height: var(--tap);
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2);
+  padding: var(--s-3) var(--s-5);
+  border-radius: var(--radius);
+  border: 2px solid transparent;
+  font-weight: 700; font-size: var(--t-md);
+  transition: background var(--dur) var(--ease-out),
+              transform 120ms var(--ease-out),
+              border-color var(--dur) var(--ease-out);
+  touch-action: manipulation;
+}
+.btn svg { width: 22px; height: 22px; }
+.btn:active { transform: scale(.97); }   /* scale only — no layout shift */
+.btn--primary { background: var(--brand); color: var(--on-brand); width: 100%; }
+.btn--primary:hover { background: var(--brand-dark); }
+.btn--ghost {
+  background: var(--surface); color: var(--brand);
+  border-color: var(--border-strong);
+}
+.btn--ghost:hover { background: var(--surface-2); }
+.btn--danger { background: transparent; color: var(--danger); border-color: var(--danger); }
+.btn[disabled] { opacity: .42; cursor: not-allowed; transform: none; }
+
+/* ---------- Drink quick-add grid ---------- */
+.drinks { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s-3); }
+.drink {
+  min-height: 92px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--s-1);
+  background: var(--surface); border: 2px solid var(--border-strong);
+  border-radius: var(--radius); color: var(--fg);
+  transition: background var(--dur) var(--ease-out),
+              border-color var(--dur) var(--ease-out),
+              transform 120ms var(--ease-out);
+  touch-action: manipulation;
+}
+.drink:hover { border-color: var(--brand); background: var(--brand-tint); }
+.drink:active { transform: scale(.96); background: var(--brand-tint-2); }
+.drink svg { width: 30px; height: 30px; color: var(--brand); }
+.drink__name { font-weight: 700; font-size: var(--t-md); }
+.drink__ml { font-size: var(--t-xs); color: var(--fg-muted); }
+
+/* ---------- Stat row ---------- */
+.stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s-3); }
+.stat {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: var(--s-4); text-align: center;
+}
+.stat__val {
+  font-family: Caprasimo, sans-serif; font-size: var(--t-2xl);
+  font-weight: 400; line-height: 1.1; display: block;
+}
+.stat__val small { font-size: var(--t-md); font-weight: 600; color: var(--fg-muted); }
+.stat__key { font-size: var(--t-xs); color: var(--fg-muted); margin-top: var(--s-1); }
+
+/* ---------- Reminder card (Today dashboard) ----------
+   A tappable summary that hands off to the tab that owns the full
+   feature — Today shows the number, Fluid/Weight/Dialysis own the
+   actions. Reuses [data-go] so the existing router wires it for free. */
+.reminder {
+  display: flex; align-items: center; gap: var(--s-3);
+  width: 100%; min-height: 76px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: var(--s-3) var(--s-4);
+  margin-bottom: var(--s-3); text-align: left;
+  transition: border-color var(--dur) var(--ease-out),
+              background var(--dur) var(--ease-out),
+              transform 120ms var(--ease-out);
+  touch-action: manipulation;
+}
+.reminder:hover { border-color: var(--border-strong); background: var(--surface-2); transform: translateY(-2px); }
+.reminder:active { transform: scale(.98); }
+.reminder__icon {
+  width: 44px; height: 44px; flex: 0 0 44px; border-radius: 12px;
+  background: var(--brand-tint); color: var(--brand);
+  display: grid; place-items: center;
+}
+.reminder__icon svg { width: 24px; height: 24px; }
+.reminder__icon--warn   { background: var(--warn-tint);   color: var(--warn); }
+.reminder__icon--danger { background: var(--danger-tint); color: var(--danger); }
+.reminder__body { flex: 1; min-width: 0; }
+.reminder__title { font-size: var(--t-xs); color: var(--fg-muted); font-weight: 600; }
+.reminder__big { display: block; font-size: var(--t-lg); font-weight: 700; margin-top: 2px; }
+.reminder__sub { display: block; font-size: var(--t-xs); color: var(--fg-muted); margin-top: 2px; }
+.reminder__chev { width: 20px; height: 20px; flex: 0 0 20px; color: var(--fg-muted); }
+
+/* ---------- Today bento tiles: Fluid + Weight, side by side ----------
+   Same [data-go] hand-off as .reminder, just laid out as a compact
+   vertical tile instead of a full-width row, so the two glanced-at-most
+   numbers on Today read as a pair rather than two rows in a long list. */
+.today-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); margin-bottom: var(--s-3); }
+.reminder--tile {
+  flex-direction: column; align-items: flex-start; justify-content: flex-start;
+  min-height: 136px; gap: var(--s-1); margin-bottom: 0;
+  position: relative; overflow: hidden;
+}
+.reminder--tile::before {
+  content: ""; position: absolute; z-index: 0;
+  top: -34%; right: -22%; width: 140px; height: 140px; border-radius: 50%;
+  background: radial-gradient(circle, var(--brand-tint-2), transparent 70%);
+  opacity: .7; pointer-events: none;
+}
+.reminder--tile > * { position: relative; z-index: 1; }
+.reminder--tile .reminder__icon { width: 40px; height: 40px; flex: 0 0 40px; margin-bottom: var(--s-1); }
+.reminder--tile .reminder__big { font-family: Caprasimo, sans-serif; font-size: var(--t-xl); font-weight: 400; margin-top: 4px; }
+
+/* Today's trend cards — .card as a full-width tappable button, same
+   hand-off pattern as .reminder above but chart-shaped. */
+.chart-card {
+  display: block; width: 100%; text-align: left;
+  cursor: pointer;
+  transition: border-color var(--dur) var(--ease-out),
+              background var(--dur) var(--ease-out),
+              transform 120ms var(--ease-out);
+  touch-action: manipulation;
+}
+.chart-card:hover { border-color: var(--border-strong); background: var(--surface-2); transform: translateY(-2px); }
+.chart-card:active { transform: scale(.98); }
+
+/* ---------- Today dashboard: staggered entrance ----------
+   Each direct child (nudge banner, status, bento tiles, next-HD row,
+   calendar, trends) fades/slides up in sequence instead of the whole
+   view appearing flat at once. */
+.view--today > * { opacity: 0; animation: cardUp 520ms var(--ease-out) forwards; }
+@keyframes cardUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.view--today > *:nth-child(1) { animation-delay:  20ms; }
+.view--today > *:nth-child(2) { animation-delay:  80ms; }
+.view--today > *:nth-child(3) { animation-delay: 140ms; }
+.view--today > *:nth-child(4) { animation-delay: 200ms; }
+.view--today > *:nth-child(5) { animation-delay: 260ms; }
+.view--today > *:nth-child(6) { animation-delay: 320ms; }
+.view--today > *:nth-child(7) { animation-delay: 380ms; }
+.view--today > *:nth-child(8) { animation-delay: 440ms; }
+
+/* ---------- List rows ---------- */
+.row {
+  display: flex; align-items: center; gap: var(--s-3);
+  min-height: var(--tap);
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+.row:last-child { border-bottom: 0; }
+.row__icon {
+  width: 42px; height: 42px; flex: 0 0 42px; border-radius: 12px;
+  background: var(--brand-tint); color: var(--brand);
+  display: grid; place-items: center;
+}
+.row__icon svg { width: 22px; height: 22px; }
+.row__body { flex: 1; min-width: 0; }
+.row__title { font-weight: 600; }
+.row__sub { font-size: var(--t-xs); color: var(--fg-muted); }
+.row__val { font-weight: 700; }
+.row__btn {
+  width: 44px; height: 44px; flex: 0 0 44px; border-radius: 50%;
+  border: 0; background: transparent; color: var(--fg-muted);
+  display: grid; place-items: center;
+}
+.row__btn:hover { background: var(--surface-2); color: var(--danger); }
+.row__btn svg { width: 20px; height: 20px; }
+
+/* ---------- Empty state ---------- */
+.empty { text-align: center; padding: var(--s-6) var(--s-4); color: var(--fg-muted); }
+.empty svg { width: 48px; height: 48px; opacity: .5; margin-bottom: var(--s-3); }
+.empty p { margin: 0 0 var(--s-4); }
+
+/* ---------- Forms ---------- */
+.field { margin-bottom: var(--s-4); }
+.field > label {
+  display: block; font-weight: 600; font-size: var(--t-sm); margin-bottom: var(--s-2);
+}
+.field .req { color: var(--danger); }
+.input {
+  width: 100%; min-height: var(--tap);
+  padding: var(--s-3) var(--s-4);
+  border: 2px solid var(--border-strong); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--fg);
+  font-size: var(--t-lg); font-variant-numeric: tabular-nums;
+}
+.input:focus { border-color: var(--brand); }
+.input[aria-invalid="true"] { border-color: var(--danger); }
+.input--big { font-size: var(--t-2xl); font-weight: 700; text-align: center; }
+.hint { font-size: var(--t-xs); color: var(--fg-muted); margin-top: var(--s-2); }
+.err {
+  display: flex; gap: var(--s-2); align-items: center;
+  font-size: var(--t-sm); color: var(--danger); font-weight: 600; margin-top: var(--s-2);
+}
+.err svg { width: 18px; height: 18px; flex: 0 0 18px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); }
+/* Grid items default to min-width:auto. Date/time inputs carry an intrinsic
+   width wider than a half track on a 375px screen, which pushes the page
+   sideways unless the items are allowed to shrink. */
+.field-row > * { min-width: 0; }
+.input { min-width: 0; }
+
+/* Segmented control — language + schedule */
+.seg { display: flex; gap: var(--s-2); background: var(--surface-2);
+       padding: var(--s-1); border-radius: var(--radius); border: 1px solid var(--border); }
+.seg button {
+  flex: 1; min-height: 48px; border: 0; border-radius: var(--radius-sm);
+  background: transparent; color: var(--fg-muted); font-weight: 700;
+  transition: background var(--dur) var(--ease-out), color var(--dur) var(--ease-out);
+}
+.seg button[aria-pressed="true"] {
+  background: var(--brand); color: var(--on-brand);
+}
+
+/* ---------- Sparkline chart ---------- */
+.spark { width: 100%; height: 140px; display: block; overflow: visible; }
+.spark__grid  { stroke: var(--border); stroke-width: 1; }
+.spark__line  { fill: none; stroke: var(--brand); stroke-width: 2.5;
+                stroke-linecap: round; stroke-linejoin: round; }
+.spark__dry   { stroke: var(--fg-muted); stroke-width: 2; stroke-dasharray: 5 4; }
+.spark__dot   { fill: var(--brand); }
+.spark__lbl   { fill: var(--fg-muted); font-size: 11px; }
+
+/* ---------- Mini bar chart (Today trend cards) ---------- */
+.minibars { width: 100%; height: 96px; display: block; overflow: visible; margin-top: var(--s-2); }
+.minibars .bar { fill: var(--brand); }
+.minibars .bar--danger { fill: var(--danger); }
+
+.chart-legend {
+  display: flex; flex-wrap: wrap; gap: var(--s-4);
+  font-size: var(--t-xs); color: var(--fg-muted); margin-top: var(--s-3);
+}
+.chart-legend span { display: inline-flex; align-items: center; gap: var(--s-2); }
+.chart-legend i { width: 18px; height: 3px; border-radius: 2px; display: inline-block; }
+.chart-legend__dot { width: 10px !important; height: 10px !important; border-radius: 50%; }
+
+/* ---------- Today's month calendar ---------- */
+.cal__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s-3); }
+.cal__head h2 { font-size: var(--t-lg); }
+.cal__nav { display: flex; gap: var(--s-2); }
+.cal__navbtn {
+  width: 40px; height: 40px; display: grid; place-items: center;
+  border-radius: 50%; border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--fg-muted);
+  transition: color var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out),
+              transform 120ms var(--ease-out);
+  touch-action: manipulation;
+}
+.cal__navbtn:hover { color: var(--brand); border-color: var(--brand); }
+.cal__navbtn:active { transform: scale(.92); }
+.cal__navbtn svg { width: 18px; height: 18px; }
+.cal__navicon--prev { transform: rotate(180deg); transform-origin: center; }
+
+.cal__grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal__grid--head { margin-bottom: var(--s-1); }
+.cal__grid--head span {
+  display: block; text-align: center; padding: var(--s-1) 0;
+  font-size: var(--t-xs); font-weight: 700; color: var(--fg-muted);
+}
+.cal__cell {
+  position: relative; aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  font-size: var(--t-sm); font-weight: 600; color: var(--fg); border-radius: var(--radius-sm);
+}
+.cal__cell--pad { visibility: hidden; }
+.cal__cell--sched { background: var(--brand-tint-2); }
+.cal__cell--today { background: var(--brand); color: var(--on-brand); font-weight: 800; box-shadow: var(--shadow); }
+.cal__dot {
+  position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+  width: 5px; height: 5px; border-radius: 50%; background: var(--brand-dark);
+}
+.cal__cell--today .cal__dot { background: var(--on-brand); }
+
+/* ---------- Bottom nav ---------- */
+.nav {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: var(--shell-max);
+  z-index: var(--z-nav);
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.nav__item {
+  min-height: var(--tap);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; padding: var(--s-2) var(--s-1);
+  border: 0; background: transparent; color: var(--fg-muted);
+  font-size: var(--t-xs); font-weight: 600;
+  border-top: 3px solid transparent;
+  transition: color var(--dur) var(--ease-out);
+  touch-action: manipulation;
+}
+.nav__item svg { width: 24px; height: 24px; }
+.nav__item[aria-current="page"] { color: var(--brand); border-top-color: var(--brand); }
+.nav__item:active { background: var(--surface-2); }
+
+/* ---------- Medication & Customization Cards ---------- */
+.med-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--s-3);
+  gap: var(--s-3);
+}
+.med-row--taken {
+  background: var(--ok-tint);
+  border-color: var(--ok);
+  opacity: 0.85;
+}
+.med-row__info { flex: 1; }
+.med-row__title { font-weight: 700; font-size: var(--t-md); display: flex; align-items: center; gap: var(--s-2); }
+.med-row__dose { font-size: var(--t-sm); color: var(--fg-muted); font-weight: 600; }
+.med-row__notes { font-size: var(--t-xs); color: var(--fg-muted); margin-top: 2px; }
+.med-tag {
+  display: inline-block; font-size: var(--t-xs); font-weight: 700;
+  padding: 2px 8px; border-radius: 999px; background: var(--brand-tint); color: var(--brand);
+  margin-top: 4px;
+}
+.med-tag--hold { background: var(--warn-tint); color: var(--warn); }
+.med-check-btn {
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 2px solid var(--border-strong); background: var(--surface);
+  display: grid; place-items: center; color: var(--fg-muted);
+  transition: all var(--dur) var(--ease-out); overflow: hidden;
+  flex: 0 0 44px; flex-shrink: 0;
+}
+.med-check-btn svg, .med-check-btn .icon { width: 22px; height: 22px; }
+.med-row--taken .med-check-btn {
+  background: var(--ok); border-color: var(--ok); color: var(--on-brand);
+}
+
+.chk-item {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-3) var(--s-4); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); margin-bottom: var(--s-2);
+  background: var(--surface); cursor: pointer;
+}
+.chk-item--done { background: var(--surface-2); text-decoration: line-through; opacity: 0.75; }
+.chk-box {
+  width: 26px; height: 26px; border-radius: 6px;
+  border: 2px solid var(--border-strong); display: grid; place-items: center;
+  flex: 0 0 26px; overflow: hidden;
+}
+.chk-box svg, .chk-box .icon { width: 18px; height: 18px; }
+.chk-item--done .chk-box { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+
+.form-group { margin-bottom: var(--s-4); }
+.form-group label { display: block; font-weight: 700; font-size: var(--t-sm); margin-bottom: var(--s-1); }
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%; padding: var(--s-3); border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong); background: var(--surface);
+}
+
+/* ---------- Sheet (modal) ---------- */
+.scrim {
+  position: fixed; inset: 0; z-index: var(--z-scrim);
+  background: rgba(4,20,26,.55);
+  backdrop-filter: blur(2px);
+  animation: fade var(--dur) var(--ease-out);
+}
+@keyframes fade { from { opacity: 0; } }
+.sheet {
+  position: fixed; z-index: var(--z-sheet);
+  left: 50%; transform: translateX(-50%);
+  bottom: 0; width: 100%; max-width: var(--shell-max);
+  background: var(--surface);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: var(--s-3) var(--s-4) calc(var(--s-5) + env(safe-area-inset-bottom));
+  box-shadow: var(--shadow-lg);
+  max-height: 88dvh; overflow-y: auto;
+  animation: sheetIn 260ms var(--ease-out);
+}
+@keyframes sheetIn { from { transform: translate(-50%, 100%); } }
+.sheet__grip {
+  width: 44px; height: 5px; border-radius: 999px; background: var(--border-strong);
+  margin: 0 auto var(--s-4);
+}
+.sheet__head { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-4); }
+.sheet__head h2 { font-size: var(--t-xl); flex: 1; }
+
+/* ---------- Toast ---------- */
+.toast-wrap {
+  position: fixed; z-index: var(--z-toast);
+  left: 50%; transform: translateX(-50%);
+  bottom: calc(var(--tap) + var(--s-4) + env(safe-area-inset-bottom));
+  width: calc(100% - var(--s-6)); max-width: 420px;
+  display: flex; flex-direction: column; gap: var(--s-2);
+  pointer-events: none;
+}
+.toast {
+  display: flex; align-items: center; gap: var(--s-3);
+  background: var(--fg); color: var(--bg);
+  padding: var(--s-3) var(--s-4); border-radius: var(--radius);
+  box-shadow: var(--shadow-lg); font-weight: 600; font-size: var(--t-sm);
+  pointer-events: auto;
+  animation: toastIn 220ms var(--ease-out);
+}
+.toast svg { width: 22px; height: 22px; flex: 0 0 22px; }
+.toast button {
+  margin-left: auto; background: transparent; border: 0;
+  color: inherit; font-weight: 700; text-decoration: underline;
+  min-height: 44px; padding: 0 var(--s-2);
+}
+@keyframes toastIn { from { opacity: 0; transform: translateY(12px); } }
+
+/* ---------- Banner (offline / disclaimer) ---------- */
+.banner {
+  display: flex; gap: var(--s-3); align-items: flex-start;
+  padding: var(--s-3) var(--s-4); border-radius: var(--radius-sm);
+  font-size: var(--t-sm); margin-bottom: var(--s-4);
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--fg-muted);
+}
+.banner svg { width: 20px; height: 20px; flex: 0 0 20px; margin-top: 2px; }
+
+/* ---------- Motion off ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* ---------- Print: the nurse handout ---------- */
+@media print {
+  .app-header, .nav, .toast-wrap, .btn, .drinks { display: none !important; }
+  body { background: #fff; }
+  .card { box-shadow: none; border: 1px solid #999; break-inside: avoid; }
+}

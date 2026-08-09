@@ -1,0 +1,16 @@
+{
+  "name": "sktidvo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SKTIDVO fluid and weight tracker for haemodialysis patients",
+  "scripts": {
+    "sync": "cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.4.4",
+    "@capacitor/core": "^7.4.4"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.4.4"
+  }
+}

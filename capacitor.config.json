@@ -1,0 +1,9 @@
+{
+  "appId": "io.github.almanalaysay93gif.sktidvo",
+  "appName": "SKTIDVO",
+  "webDir": "www",
+  "backgroundColor": "#0B6E78",
+  "android": {
+    "backgroundColor": "#0B6E78"
+  }
+}
