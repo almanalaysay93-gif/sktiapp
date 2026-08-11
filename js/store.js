@@ -4,6 +4,8 @@
    can migrate instead of wiping a patient's history.
    =================================================================== */
 
+import { findFood } from './foods.js';
+
 const NS = 'skti.v1.';
 const KEYS = {
   profile:     NS + 'profile',
@@ -13,7 +15,9 @@ const KEYS = {
   medications: NS + 'medications',
   medLogs:     NS + 'med_logs',
   checklists:  NS + 'checklists',
-  hdBp:        NS + 'hd_bp'
+  hdBp:        NS + 'hd_bp',
+  foodLogs:    NS + 'food_logs',
+  labLogs:     NS + 'lab_logs'
 };
 
 const DEFAULT_PROFILE = {
@@ -25,6 +29,59 @@ const DEFAULT_PROFILE = {
   dryWeightKg: null,      // set by the SKTI nephrologist
   allowanceMl: 1000,      // set by the SKTI nurse
   idwgLimitKg: 2.0,       // typical starting limit; editable
+
+  // Daily diet budgets the renal dietitian sets. Defaults follow the
+  // KDOQI 2020 Clinical Practice Guideline for Nutrition in CKD, the
+  // haemodialysis columns specifically:
+  //   potassium   2,000-3,000 mg/day  (HD; unrestricted on PD)
+  //   sodium      <2,300 mg/day
+  //   phosphorus  800-1,000 mg/day
+  //   energy      25-35 kcal/kg dry (IBW) weight/day
+  //   protein     1.0-1.2 g/kg dry (IBW) weight/day
+  //   fiber       25-34 g/day
+  // kcal/protein additionally scale off dryWeightKg via
+  // recommendedKcalRange()/recommendedProteinRange() below, shown to the
+  // patient as a suggestion in Settings — the stored number here is
+  // always what the dietitian actually set (or this flat starting point
+  // before they have).
+  potassiumLimitMg: 2000,
+  sodiumLimitMg: 2300,
+  phosphorusLimitMg: 900,
+  kcalGoal: 1800,
+  proteinGoalG: 60,
+  fiberGoalG: 30,
+
+  // When true (the default), potassium/phosphorus/protein goals actually
+  // USED by the app (bands, alarms, the summary card) are computed live
+  // from the most recent lab draw via effectivePotassiumLimitMg() etc.
+  // below, not read off the flat fields above. Those flat fields become
+  // the fallback for when there's no lab yet, and the value the nurse
+  // falls back to if they switch auto off. Sodium/fiber/kcal are
+  // deliberately NOT included — sodium restriction is driven by fluid
+  // overload and blood pressure, not serum sodium (which mostly reflects
+  // water balance in a dialysis patient); fiber has no serum correlate;
+  // kcal only scales with dry weight, already handled separately.
+  autoGoalsFromLabs: true,
+
+  // Most recent lab draw — entered by the nurse/dietitian, not the
+  // patient. Drives recommendedPotassiumRangeFromLab() /
+  // recommendedPhosphorusRangeFromLab() below: KDOQI ties the dietary K
+  // restriction specifically to "when serum potassium is elevated", so a
+  // normal lab justifies a looser goal, not the same flat number for
+  // everyone. labNa/labAlbumin are informational only — serum sodium in
+  // a dialysis patient mostly reflects fluid balance, not dietary sodium
+  // intake, so it does NOT drive the sodium goal; albumin is a
+  // malnutrition marker but confounded by inflammation, so it's shown,
+  // not used to compute a number.
+  // Legacy flat lab fields — kept here ONLY for backward-compatible
+  // restore/migration. The canonical store is now KEYS.labLogs.
+  // New installs will never write these; importAll migrates them.
+  labK: null,
+  labPhos: null,
+  labNa: null,
+  labAlbumin: null,
+  labDate: null,
+
   schedule: 'MWF',        // 'MWF' | 'TTS' | 'CUSTOM'
   customDays: [1, 3, 5],  // Mon, Wed, Fri
   shiftName: '1st Shift',
@@ -155,6 +212,317 @@ export function todayIntake() {
 
 export function todayIntakeMl() {
   return todayIntake().reduce((sum, i) => sum + i.ml, 0);
+}
+
+/* ---------- food log (potassium / sodium tracker) ----------
+   Ported concept from FoodYou: a logged portion snapshots the food's
+   mineral load at log time (foods.js values can change between app
+   versions; a saved diary entry must not silently rewrite history).
+   servings is a multiplier on the food's per-serving K/Na/P. */
+
+export function getFoodLogs() {
+  return read(KEYS.foodLogs, []).sort((a, b) => b.ts - a.ts);
+}
+
+export const MEALS = ['breakfast', 'lunch', 'dinner'];
+
+/** Clock-based default when the patient doesn't pick a meal explicitly. */
+export function inferMeal(when = new Date()) {
+  const h = when.getHours();
+  if (h < 11) return 'breakfast';
+  if (h < 17) return 'lunch';
+  return 'dinner';
+}
+
+export function logFood(foodId, servings = 1, when = new Date(), meal = null) {
+  const f = findFood(foodId);
+  if (!f) return null;
+  const s = Number(servings) || 1;
+  const list = read(KEYS.foodLogs, []);
+  const entry = {
+    id: uid(), day: dayKey(when), ts: when.getTime(),
+    meal: MEALS.includes(meal) ? meal : inferMeal(when),
+    foodId: f.id, name: f.name, serving: f.serving, servings: s,
+    kMg:  Math.round(f.k  * s),
+    naMg: Math.round(f.na * s),
+    phMg: Math.round((f.ph || 0) * s),
+    kcal: Math.round((f.kcal || 0) * s),
+    proteinG: Math.round((f.protein || 0) * s * 10) / 10,
+    fiberG:   Math.round((f.fiber   || 0) * s * 10) / 10,
+    ml:   Math.round((f.ml || 0) * s)   // fluid volume, if a liquid/soupy food
+  };
+  list.push(entry);
+  write(KEYS.foodLogs, list);
+  emit();
+  return entry;
+}
+
+export function deleteFood(id) {
+  write(KEYS.foodLogs, read(KEYS.foodLogs, []).filter(e => e.id !== id));
+  emit();
+}
+
+/** Undo support, matching restoreIntake. */
+export function restoreFood(entry) {
+  const list = read(KEYS.foodLogs, []);
+  if (!list.some(e => e.id === entry.id)) list.push(entry);
+  write(KEYS.foodLogs, list);
+  emit();
+}
+
+export function todayFood() {
+  const key = dayKey();
+  return getFoodLogs().filter(e => e.day === key);
+}
+
+/** Today's entries split into the three meal tables the Food tab shows. */
+export function todayFoodByMeal() {
+  const all = todayFood();
+  return Object.fromEntries(MEALS.map(m => [m, all.filter(e => e.meal === m)]));
+}
+
+/** Running daily totals for the mineral meters. */
+export function todayFoodTotals() {
+  return todayFood().reduce((acc, e) => {
+    acc.k       += e.kMg      || 0;
+    acc.na      += e.naMg     || 0;
+    acc.ph      += e.phMg     || 0;
+    acc.kcal    += e.kcal     || 0;
+    acc.protein += e.proteinG || 0;
+    acc.fiber   += e.fiberG   || 0;
+    acc.ml      += e.ml       || 0;
+    return acc;
+  }, { k: 0, na: 0, ph: 0, kcal: 0, protein: 0, fiber: 0, ml: 0 });
+}
+
+/** 'ok' below 70% of the limit, 'warn' up to it, 'danger' past it —
+    same three-band grammar the fluid/IDWG status uses. */
+export function mineralBand(totalMg, limitMg) {
+  if (!limitMg) return null;
+  if (totalMg <= limitMg * 0.7) return 'ok';
+  if (totalMg <= limitMg) return 'warn';
+  return 'danger';
+}
+
+export function potassiumBand() {
+  return mineralBand(todayFoodTotals().k, effectivePotassiumLimitMg());
+}
+export function sodiumBand() {
+  return mineralBand(todayFoodTotals().na, getProfile().sodiumLimitMg);
+}
+export function kcalBand() {
+  return mineralBand(todayFoodTotals().kcal, getProfile().kcalGoal);
+}
+export function phosphorusBand() {
+  return mineralBand(todayFoodTotals().ph, effectivePhosphorusLimitMg());
+}
+
+/** KDOQI protein and fiber targets are daily MINIMUMS, not ceilings —
+    the opposite polarity from K/Na/phosphorus/kcal above. 'ok' once the
+    goal is met, 'warn' past halfway, 'danger' well short (that's the
+    protein-energy-wasting risk zone, so "danger" still means "act on
+    this", just in the opposite direction from the mineral bands). */
+export function goalFloorBand(total, goal) {
+  if (!goal) return null;
+  if (total >= goal) return 'ok';
+  if (total >= goal * 0.5) return 'warn';
+  return 'danger';
+}
+export function proteinBand() {
+  return goalFloorBand(todayFoodTotals().protein, effectiveProteinGoalG());
+}
+export function fiberBand() {
+  return goalFloorBand(todayFoodTotals().fiber, getProfile().fiberGoalG);
+}
+
+/** KDOQI's energy and protein targets are per kg of dry (IBW) weight,
+    unlike the flat mg/day mineral budgets — shown in Settings as a
+    suggestion once a dry weight is on file, so the nurse/dietitian can
+    see the recommended range before typing in the number they actually
+    want. Returns null with no dry weight yet. */
+export function recommendedKcalRange(profile = getProfile()) {
+  if (!profile.dryWeightKg) return null;
+  return { low: Math.round(profile.dryWeightKg * 25), high: Math.round(profile.dryWeightKg * 35) };
+}
+export function recommendedProteinRange(profile = getProfile()) {
+  if (!profile.dryWeightKg) return null;
+  return { low: Math.round(profile.dryWeightKg * 1.0), high: Math.round(profile.dryWeightKg * 1.2) };
+}
+
+/* ---------- lab-based goal suggestions ----------
+   KDOQI's flat mg/day mineral budgets are a starting point for a patient
+   with no lab history yet; once a lab is on file the actual restriction
+   should track it — a normal serum level does not need the same tight
+   number as a truly elevated one. Both functions return null with no
+   lab value on file, {low, high, flag} otherwise. flag is 'high' |
+   'normal' | 'low', purely descriptive — it drives copy/colour in the
+   UI, the numbers are what actually get suggested. */
+
+const NORMAL_SERUM_K   = { low: 3.5, high: 5.5 };  // mEq/L
+const NORMAL_SERUM_PHOS = { low: 2.5, high: 5.5 }; // mg/dL
+
+export function recommendedPotassiumRangeFromLab(profile = getProfile()) {
+  // Read from the lab log (new) — fall back to profile fields (legacy).
+  const latest = latestLab();
+  const lab = (latest && latest.k != null) ? latest.k : profile.labK;
+  if (!Number.isFinite(lab)) return null;
+  if (lab > NORMAL_SERUM_K.high) return { low: 1500, high: 2000, flag: 'high' };
+  if (lab < NORMAL_SERUM_K.low)  return { low: 3000, high: 3500, flag: 'low' };
+  return { low: 2000, high: 3000, flag: 'normal' };
+}
+
+export function recommendedPhosphorusRangeFromLab(profile = getProfile()) {
+  // Read from the lab log (new) — fall back to profile fields (legacy).
+  const latest = latestLab();
+  const lab = (latest && latest.phos != null) ? latest.phos : profile.labPhos;
+  if (!Number.isFinite(lab)) return null;
+  if (lab > NORMAL_SERUM_PHOS.high) return { low: 600, high: 800, flag: 'high' };
+  if (lab < NORMAL_SERUM_PHOS.low)  return { low: 1000, high: 1200, flag: 'low' };
+  return { low: 800, high: 1000, flag: 'normal' };
+}
+
+/* ---------- effective goals — the numbers actually enforced ----------
+   With autoGoalsFromLabs on (the default) these override the flat
+   profile fields whenever a lab-based number is available, so the band
+   colours, the alarm gate and the summary card all track the patient's
+   real chemistry instead of a number that was typed in once and never
+   revisited. The flat field is the fallback for "no lab yet" and for
+   "auto is switched off" — never silently overwritten by this. */
+
+/** Midpoint of a {low, high} suggestion, rounded to the nearest 50 mg —
+    same rounding the old manual "Apply" button used. */
+const midpoint50 = r => Math.round((r.low + r.high) / 2 / 50) * 50;
+
+export function effectivePotassiumLimitMg(profile = getProfile()) {
+  if (profile.autoGoalsFromLabs) {
+    const rec = recommendedPotassiumRangeFromLab(profile);
+    if (rec) return midpoint50(rec);
+  }
+  return profile.potassiumLimitMg;
+}
+
+export function effectivePhosphorusLimitMg(profile = getProfile()) {
+  if (profile.autoGoalsFromLabs) {
+    const rec = recommendedPhosphorusRangeFromLab(profile);
+    if (rec) return midpoint50(rec);
+  }
+  return profile.phosphorusLimitMg;
+}
+
+/** Protein has no direct lab threshold the way K/phosphorus do — KDOQI's
+    1.0-1.2 g/kg dry weight range is a spread, not a lab-triggered switch.
+    What DOES move within that spread is serum albumin: a low albumin is
+    a malnutrition marker, so it pushes the target to the top of the
+    range (1.2) instead of the usual midpoint (1.1). Needs a dry weight
+    on file either way — falls back to the flat manual number without
+    one, same as recommendedProteinRange(). */
+export function effectiveProteinGoalG(profile = getProfile()) {
+  if (profile.autoGoalsFromLabs && profile.dryWeightKg) {
+    const albumin = latestLab()?.albumin;
+    const factor = Number.isFinite(albumin) && albumin < LAB_RANGES.albumin.low ? 1.2 : 1.1;
+    return Math.round(profile.dryWeightKg * factor);
+  }
+  return profile.proteinGoalG;
+}
+
+/* ---------- lab logs ----------
+   Each blood draw is stored as a separate dated record, not overwriting
+   a single set of profile fields. This lets the app show trends over
+   multiple months and lets the nurse compare consecutive results.
+
+   Fields: k (mEq/L), phos (mg/dL), na (mEq/L), albumin (g/dL),
+           hgb (g/dL), bun (mg/dL), creatinine (mg/dL),
+           bicarbonate (mEq/L), calcium (mg/dL), uricAcid (mg/dL),
+           note (free text). All optional except day/ts. */
+
+export function getLabLogs() {
+  return read(KEYS.labLogs, []).sort((a, b) => b.ts - a.ts);
+}
+
+export function latestLab() {
+  return getLabLogs()[0] || null;
+}
+
+export function logLab(data, when = new Date()) {
+  // Migrate any legacy profile lab fields on first save if no logs exist yet.
+  _migrateLabsIfNeeded();
+  const list = read(KEYS.labLogs, []);
+  const entry = {
+    id: uid(),
+    day: data.day || dayKey(when),
+    ts: when.getTime(),
+    k:           data.k           != null ? Number(data.k)           : null,
+    phos:        data.phos        != null ? Number(data.phos)        : null,
+    na:          data.na          != null ? Number(data.na)          : null,
+    albumin:     data.albumin     != null ? Number(data.albumin)     : null,
+    hgb:         data.hgb         != null ? Number(data.hgb)         : null,
+    bun:         data.bun         != null ? Number(data.bun)         : null,
+    creatinine:  data.creatinine  != null ? Number(data.creatinine)  : null,
+    bicarbonate: data.bicarbonate != null ? Number(data.bicarbonate) : null,
+    calcium:     data.calcium     != null ? Number(data.calcium)     : null,
+    uricAcid:    data.uricAcid    != null ? Number(data.uricAcid)    : null,
+    note:        data.note ? String(data.note).slice(0, 300) : ''
+  };
+  list.push(entry);
+  write(KEYS.labLogs, list);
+  emit();
+  return entry;
+}
+
+export function deleteLab(id) {
+  write(KEYS.labLogs, read(KEYS.labLogs, []).filter(e => e.id !== id));
+  emit();
+}
+
+/* Migrate legacy single-set profile lab fields into the new log on first
+   access. Runs silently at most once — after migration the profile fields
+   are nulled out so they never migrate again. */
+function _migrateLabsIfNeeded() {
+  const existing = read(KEYS.labLogs, []);
+  if (existing.length > 0) return;   // already have log entries
+  const p = getProfile();
+  const hasLegacy = p.labK != null || p.labPhos != null || p.labNa != null || p.labAlbumin != null;
+  if (!hasLegacy) return;
+  const when = p.labDate ? new Date(p.labDate + 'T00:00:00') : new Date();
+  const entry = {
+    id: uid(),
+    day: p.labDate || dayKey(when),
+    ts:  when.getTime(),
+    k:        p.labK,
+    phos:     p.labPhos,
+    na:       p.labNa,
+    albumin:  p.labAlbumin,
+    hgb: null, bun: null, creatinine: null,
+    bicarbonate: null, calcium: null, uricAcid: null,
+    note: ''
+  };
+  write(KEYS.labLogs, [entry]);
+  // Clear legacy fields from profile so we never migrate again.
+  saveProfile({ labK: null, labPhos: null, labNa: null, labAlbumin: null, labDate: null });
+}
+
+/* Reference ranges used for colour-coding in the UI (KDOQI / standard HD). */
+export const LAB_RANGES = {
+  k:           { low: 3.5,  high: 5.5,  unit: 'mEq/L' },
+  phos:        { low: 2.5,  high: 5.5,  unit: 'mg/dL' },
+  na:          { low: 135,  high: 145,  unit: 'mEq/L' },
+  albumin:     { low: 3.5,  high: null, unit: 'g/dL'  },   // floor only
+  hgb:         { low: 10,   high: 13,   unit: 'g/dL'  },
+  bun:         { low: null, high: 100,  unit: 'mg/dL' },   // ceiling only (pre-HD)
+  creatinine:  { low: null, high: null, unit: 'mg/dL' },   // informational
+  bicarbonate: { low: 18,   high: 24,   unit: 'mEq/L' },
+  calcium:     { low: 8.4,  high: 10.2, unit: 'mg/dL' },
+  uricAcid:    { low: null, high: 8,    unit: 'mg/dL' }    // ceiling only
+};
+
+/** 'normal' | 'low' | 'high' | null (if no range defined for this test). */
+export function labFlag(value, key) {
+  if (!Number.isFinite(value)) return null;
+  const r = LAB_RANGES[key];
+  if (!r) return null;
+  if (r.low  != null && value < r.low)  return 'low';
+  if (r.high != null && value > r.high) return 'high';
+  return 'normal';
 }
 
 /* ---------- dialysis sessions ---------- */
@@ -516,7 +884,9 @@ export function exportAll() {
     sessions: getSessions(),
     medications: getMedications(),
     medLogs: getMedLogs(),
-    hdBp: getHdBp()
+    hdBp: getHdBp(),
+    foodLogs: getFoodLogs(),
+    labLogs: getLabLogs()
   };
 }
 
@@ -549,6 +919,20 @@ function cleanSessions(list) {
     .filter(s => /^\d{4}-\d{2}-\d{2}$/.test(s.day) && s.postKg > 0 && s.postKg < 500);
 }
 
+function cleanFoodLogs(list) {
+  return (Array.isArray(list) ? list : [])
+    .map(e => ({ id: str(e.id) || uid(), day: str(e.day), ts: num(e.ts, 0),
+                 meal: MEALS.includes(e.meal) ? e.meal : inferMeal(new Date(num(e.ts, 0) || Date.now())),
+                 foodId: str(e.foodId), name: str(e.name).slice(0, 80),
+                 serving: str(e.serving).slice(0, 40),
+                 servings: num(e.servings, 1),
+                 kMg: num(e.kMg, 0), naMg: num(e.naMg, 0),
+                 phMg: num(e.phMg, 0), kcal: num(e.kcal, 0),
+                 proteinG: num(e.proteinG, 0), fiberG: num(e.fiberG, 0), ml: num(e.ml, 0) }))
+    .filter(e => /^\d{4}-\d{2}-\d{2}$/.test(e.day) && e.name &&
+                  e.kMg >= 0 && e.kMg < 20000 && e.naMg >= 0 && e.naMg < 20000);
+}
+
 function cleanHdBp(list) {
   return (Array.isArray(list) ? list : [])
     .map(r => ({ id: str(r.id) || uid(), day: str(r.day), ts: num(r.ts, 0),
@@ -557,6 +941,27 @@ function cleanHdBp(list) {
                  note: str(r.note).slice(0, 200) }))
     .filter(r => /^\d{4}-\d{2}-\d{2}$/.test(r.day) &&
                   r.sys > 0 && r.sys < 300 && r.dia > 0 && r.dia < 200);
+}
+
+function cleanLabLogs(list) {
+  return (Array.isArray(list) ? list : [])
+    .map(e => ({
+      id:          str(e.id) || uid(),
+      day:         str(e.day),
+      ts:          num(e.ts, 0),
+      k:           num(e.k),
+      phos:        num(e.phos),
+      na:          num(e.na),
+      albumin:     num(e.albumin),
+      hgb:         num(e.hgb),
+      bun:         num(e.bun),
+      creatinine:  num(e.creatinine),
+      bicarbonate: num(e.bicarbonate),
+      calcium:     num(e.calcium),
+      uricAcid:    num(e.uricAcid),
+      note:        str(e.note).slice(0, 300)
+    }))
+    .filter(e => /^\d{4}-\d{2}-\d{2}$/.test(e.day));
 }
 
 function cleanProfile(p) {
@@ -571,6 +976,18 @@ function cleanProfile(p) {
     dryWeightKg:      num(src.dryWeightKg),
     allowanceMl:      num(src.allowanceMl, 1000),
     idwgLimitKg:      num(src.idwgLimitKg, 2.0),
+    potassiumLimitMg: num(src.potassiumLimitMg, 2000),
+    sodiumLimitMg:    num(src.sodiumLimitMg, 2300),
+    phosphorusLimitMg:num(src.phosphorusLimitMg, 900),
+    kcalGoal:         num(src.kcalGoal, 1800),
+    proteinGoalG:     num(src.proteinGoalG, 60),
+    fiberGoalG:       num(src.fiberGoalG, 30),
+    autoGoalsFromLabs: src.autoGoalsFromLabs !== false,
+    labK:             num(src.labK),
+    labPhos:          num(src.labPhos),
+    labNa:            num(src.labNa),
+    labAlbumin:       num(src.labAlbumin),
+    labDate:          str(src.labDate),
     schedule:         ['MWF', 'TTS', 'CUSTOM'].includes(src.schedule) ? src.schedule : 'MWF',
     customDays:       Array.isArray(src.customDays) ? src.customDays : [1, 3, 5],
     shiftName:        str(src.shiftName) || '1st Shift',
@@ -602,7 +1019,9 @@ export function importAll(data) {
     sessions:    cleanSessions(data.sessions),
     medications: Array.isArray(data.medications) ? data.medications : DEFAULT_MEDS,
     medLogs:     (data.medLogs && typeof data.medLogs === 'object') ? data.medLogs : {},
-    hdBp:        cleanHdBp(data.hdBp)
+    hdBp:        cleanHdBp(data.hdBp),
+    foodLogs:    cleanFoodLogs(data.foodLogs),
+    labLogs:     cleanLabLogs(data.labLogs)
   };
   write(KEYS.profile,     next.profile);
   write(KEYS.weights,     next.weights);
@@ -611,13 +1030,17 @@ export function importAll(data) {
   write(KEYS.medications, next.medications);
   write(KEYS.medLogs,     next.medLogs);
   write(KEYS.hdBp,        next.hdBp);
+  write(KEYS.foodLogs,    next.foodLogs);
+  write(KEYS.labLogs,     next.labLogs);
   emit();
   return {
     weights: next.weights.length,
     intake: next.intake.length,
     sessions: next.sessions.length,
     medications: next.medications.length,
-    hdBp: next.hdBp.length
+    hdBp: next.hdBp.length,
+    foodLogs: next.foodLogs.length,
+    labLogs: next.labLogs.length
   };
 }
 

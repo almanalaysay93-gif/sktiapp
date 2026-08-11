@@ -117,6 +117,12 @@
 
 /* ---------- Reset ---------- */
 *, *::before, *::after { box-sizing: border-box; }
+/* .banner/.btn/etc. all set their own `display`, which — at equal
+   selector specificity — wins over the UA stylesheet's `[hidden]{display:none}`
+   in the cascade. Without this, a plain `hidden` attribute on a themed
+   element (banners, buttons) renders it anyway, visible but empty. This
+   makes `hidden` win unconditionally again, everywhere. */
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
@@ -564,6 +570,13 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
 .input:focus { border-color: var(--brand); }
 .input[aria-invalid="true"] { border-color: var(--danger); }
 .input--big { font-size: var(--t-2xl); font-weight: 700; text-align: center; }
+/* Kill the native number-input spinner (the roller/stepper arrows) on
+   every numeric field app-wide — the servings/grams steppers, quick-pick
+   segments and +/- flows already cover that interaction, and the native
+   control just eats space and misaligns .input--big's centred digits. */
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .hint { font-size: var(--t-xs); color: var(--fg-muted); margin-top: var(--s-2); }
 .err {
   display: flex; gap: var(--s-2); align-items: center;
@@ -652,7 +665,7 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
   width: 100%; max-width: var(--shell-max);
   z-index: var(--z-nav);
-  display: grid; grid-template-columns: repeat(5, 1fr);
+  display: grid; grid-template-columns: repeat(7, 1fr);
   background: var(--surface);
   border-top: 1px solid var(--border);
   padding-bottom: env(safe-area-inset-bottom);
@@ -667,7 +680,7 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
   transition: color var(--dur) var(--ease-out);
   touch-action: manipulation;
 }
-.nav__item svg { width: 24px; height: 24px; }
+.nav__item svg { width: 22px; height: 22px; }
 .nav__item[aria-current="page"] { color: var(--brand); border-top-color: var(--brand); }
 .nav__item:active { background: var(--surface-2); }
 
@@ -790,6 +803,115 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
   border: 1px solid var(--border); background: var(--surface-2); color: var(--fg-muted);
 }
 .banner svg { width: 20px; height: 20px; flex: 0 0 20px; margin-top: 2px; }
+.banner--danger {
+  background: var(--danger-tint); border-color: var(--danger); color: var(--danger);
+}
+.banner--danger svg { animation: badgePulse 1.8s ease-in-out infinite; }
+
+/* ---------- Food tracker (potassium / sodium) — minimalist theme ----------
+   Flat text and thin dividers carry the browsing view; colour is spent
+   only on the dot next to a number worth a second look, and on the
+   sheet's alarm banner when a food is actually risky. Nothing here
+   competes with that one moment of real colour. */
+.food-cat { margin-top: var(--s-4); }
+.food-search-hint {
+  text-align: center; color: var(--fg-muted); font-size: var(--t-sm);
+  padding: var(--s-5) var(--s-3);
+}
+
+.food-list { border-top: 1px solid var(--border); margin-bottom: var(--s-2); }
+.food-row {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+  width: 100%; min-height: var(--tap);
+  padding: var(--s-2) 2px; text-align: left;
+  border: 0; border-bottom: 1px solid var(--border); background: transparent;
+  touch-action: manipulation;
+  transition: background var(--dur) var(--ease-out);
+}
+.food-row:hover  { background: var(--surface-2); }
+.food-row:active { background: var(--brand-tint); }
+.food-row__name { font-size: var(--t-sm); font-weight: 600; }
+.food-row__serving { display: block; font-weight: 400; font-size: var(--t-xs); color: var(--fg-muted); margin-top: 1px; }
+.food-row__nums { display: flex; gap: var(--s-3); flex: 0 0 auto; }
+
+.freading {
+  font-size: var(--t-xs); color: var(--fg-muted); font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.fdot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-left: 2px; }
+.fdot--mod  { background: var(--warn); }
+.fdot--high { background: var(--danger); }
+
+.fproj { display: flex; gap: var(--s-3); flex-wrap: wrap; margin: var(--s-3) 0; }
+.row__icon--danger { background: var(--danger-tint); color: var(--danger); }
+
+/* ---------- MyFitnessPal-style diary ----------
+   One summary card up top (Goal / Food / Remaining per mineral, echoing
+   MFP's calorie card), then one card per meal with a header total, a
+   log table, and an "+ Add Food" row — MFP's diary section shape. */
+.mfp-summary { display: flex; align-items: stretch; gap: var(--s-3); text-align: center; }
+.mfp-summary__divider { width: 1px; background: var(--border); flex: 0 0 1px; margin: var(--s-1) 0; }
+.mfp-col { flex: 1 1 0; min-width: 0; }
+.mfp-col__label { font-size: var(--t-xs); font-weight: 700; color: var(--fg-muted); text-transform: uppercase; letter-spacing: .04em; margin: 0; }
+.mfp-col__remaining { font-family: Caprasimo, sans-serif; font-weight: 400; font-size: var(--t-xl); line-height: 1.1; margin: 4px 0 0; }
+.mfp-col__remaining-caption { font-size: var(--t-xs); color: var(--fg-muted); margin: 0 0 var(--s-2); }
+.mfp-col__breakdown { display: flex; flex-direction: column; gap: 2px; font-size: var(--t-xs); color: var(--fg-muted); }
+.mfp-col__breakdown b { color: var(--fg); font-weight: 700; }
+
+/* overflow:hidden clips the bled table/add-food-row back to the card's
+   own rounded corners, since both intentionally run past its padding. */
+.meal-section { padding-bottom: 0; overflow: hidden; }
+.meal-section__head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-2);
+  margin-bottom: var(--s-2);
+}
+.meal-section__head h3 { margin: 0; font-size: var(--t-md); font-weight: 700; }
+.meal-section__total { font-size: var(--t-xs); color: var(--fg-muted); white-space: nowrap; }
+
+/* Table and add-food row bleed to the card's edge — MFP's diary rows
+   run full width under a padded section title, not boxed in further. */
+/* Scrolls horizontally instead of clipping now that the table carries
+   Food / Kcal / K / Na, which doesn't reliably fit a narrow phone. */
+.food-table-scroll {
+  width: calc(100% + var(--s-4) * 2); margin: 0 calc(var(--s-4) * -1);
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  /* Swipe-to-scroll still works when the table is wider than the card;
+     the OS/browser scrollbar track just doesn't sit as a visible bar
+     between the table and the Add Food row below it. */
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.food-table-scroll::-webkit-scrollbar { display: none; }
+.food-table {
+  width: 100%; min-width: 480px;
+  border-collapse: collapse; font-size: var(--t-sm);
+}
+.food-table th, .food-table td { padding: var(--s-2) var(--s-3); text-align: left; }
+.food-table th:first-child, .food-table td:first-child { padding-left: var(--s-4); }
+.food-table th:last-child, .food-table td:last-child { padding-right: var(--s-4); }
+.food-table thead th {
+  font-size: var(--t-xs); text-transform: uppercase; letter-spacing: .04em;
+  color: var(--fg-muted); font-weight: 600;
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border-strong);
+}
+.food-table tbody tr { border-bottom: 1px solid var(--border); }
+.food-table tr.food-tr--hot .food-td__name { color: var(--danger); font-weight: 700; }
+.food-table .food-td__num { text-align: right; white-space: nowrap; }
+.food-table .food-td__del { text-align: right; width: 44px; }
+.food-table .food-td__del .row__btn { width: 36px; height: 36px; flex: 0 0 36px; margin-left: auto; }
+.food-table .food-td__empty { color: var(--fg-muted); font-size: var(--t-xs); padding: var(--s-3) var(--s-4); }
+
+.add-food-row {
+  display: flex; align-items: center; gap: var(--s-2);
+  width: calc(100% + var(--s-4) * 2); margin: 0 calc(var(--s-4) * -1);
+  min-height: var(--tap); padding: var(--s-3) var(--s-4);
+  border: 0; border-top: 1px solid var(--border); background: transparent;
+  color: var(--brand); font-weight: 700; font-size: var(--t-sm); text-transform: uppercase; letter-spacing: .02em;
+  touch-action: manipulation;
+  transition: background var(--dur) var(--ease-out);
+}
+.add-food-row:hover  { background: var(--brand-tint); }
+.add-food-row:active { background: var(--brand-tint-2); }
+.add-food-row svg { width: 18px; height: 18px; }
 
 /* ---------- Motion off ---------- */
 @media (prefers-reduced-motion: reduce) {
@@ -806,3 +928,84 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
   body { background: #fff; }
   .card { box-shadow: none; border: 1px solid #999; break-inside: avoid; }
 }
+
+/* ---------- Lab results tables ---------- */
+.lab-section { margin-bottom: var(--s-5); }
+.lab-section__head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--s-2);
+}
+.lab-section__head h3 { font-size: var(--t-md); font-weight: 700; margin: 0; }
+.lab-section__date { font-size: var(--t-xs); color: var(--fg-muted); }
+
+.lab-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 calc(var(--s-4) * -1); }
+.lab-table {
+  width: 100%; min-width: 320px;
+  border-collapse: collapse;
+  font-size: var(--t-sm);
+}
+.lab-table th {
+  padding: var(--s-2) var(--s-3);
+  text-align: left; font-size: var(--t-xs); font-weight: 600;
+  color: var(--fg-muted); text-transform: uppercase; letter-spacing: .04em;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.lab-table td {
+  padding: var(--s-2) var(--s-3);
+  border-bottom: 1px solid var(--border-subtle, var(--border));
+  vertical-align: middle;
+}
+.lab-table tbody tr:last-child td { border-bottom: 0; }
+.lab-td__name { min-width: 130px; }
+.lab-td__val  { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.lab-td__unit { color: var(--fg-muted); font-size: var(--t-xs); white-space: nowrap; padding-left: 2px; }
+.lab-td__flag { width: 72px; text-align: right; }
+
+/* Coloured status badges */
+.lab-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 2px 7px; border-radius: 99px;
+  font-size: var(--t-xs); font-weight: 700; white-space: nowrap;
+}
+.lab-badge--normal { background: var(--ok-tint,  hsl(145 50% 90%)); color: hsl(145 40% 30%); }
+.lab-badge--high   { background: var(--danger-tint, hsl(0 70% 94%));   color: hsl(0 60% 40%); }
+.lab-badge--low    { background: hsl(220 70% 93%); color: hsl(220 60% 35%); }
+.lab-badge--info   { background: var(--surface-2); color: var(--fg-muted); }
+
+/* Row highlight for abnormal values */
+.lab-tr--high td, .lab-tr--low td { background: hsl(0 60% 98%); }
+[data-theme=dark] .lab-tr--high td,
+[data-theme=dark] .lab-tr--low  td { background: hsl(0 30% 14%); }
+
+/* Draw date group header (one per blood draw date) */
+.lab-draw-card { margin-bottom: var(--s-5); }
+.lab-draw-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface-2); border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border: 1px solid var(--border); border-bottom: 0;
+}
+.lab-draw-head h3 { margin: 0; font-size: var(--t-md); font-weight: 700; }
+.lab-draw-head .row__btn { flex-shrink: 0; }
+
+.lab-group-title {
+  font-size: var(--t-xs); font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--fg-muted);
+  padding: var(--s-2) var(--s-4) 0;
+  border-left: 1px solid var(--border); border-right: 1px solid var(--border);
+  background: var(--surface);
+}
+
+/* Dashboard card in Today */
+.lab-dash-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s-2);
+  margin-top: var(--s-3);
+}
+.lab-dash-item {
+  display: flex; flex-direction: column; align-items: flex-start;
+  padding: var(--s-2) var(--s-3);
+  background: var(--surface-2); border-radius: var(--radius-sm);
+}
+.lab-dash-item .stat__val { font-size: var(--t-lg); font-weight: 700; font-variant-numeric: tabular-nums; }
+.lab-dash-item .stat__key { font-size: var(--t-xs); color: var(--fg-muted); margin-top: 2px; }

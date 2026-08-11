@@ -7,6 +7,7 @@
 import { t, setLang, getLang, LANGS, langName, glassWord } from './i18n.js';
 import * as S from './store.js';
 import * as Cal from './calendar.js';
+import { FOOD_DB, FOOD_CATS, findFood, mineralLevel } from './foods.js';
 
 /* ---------- tiny helpers ---------- */
 
@@ -587,6 +588,21 @@ function weightReminder() {
   });
 }
 
+function foodReminder() {
+  const totals = S.todayFoodTotals();
+  const kB = S.potassiumBand(), naB = S.sodiumBand();
+  const worst = [kB, naB].includes('danger') ? 'danger'
+              : [kB, naB].includes('warn') ? 'warn' : undefined;
+  return reminderCard({
+    go: 'food', iconName: 'fork', tone: worst,
+    title: t('food.title'),
+    big: `${totals.kcal}<small style="font-size:var(--t-sm);font-weight:600;color:var(--fg-muted)"> ${esc(t('common.kcal'))} · K ${totals.k} · Na ${totals.na}</small>`,
+    sub: worst === 'danger' ? t('food.overShort')
+       : worst === 'warn' ? t('food.nearShort')
+       : t('food.okShort')
+  });
+}
+
 function nextHdReminder() {
   const p = S.getProfile();
   return reminderCard({
@@ -760,6 +776,58 @@ function trendsSection() {
   ${cards.join('')}`;
 }
 
+/* ---------- Lab dashboard card for Today ---------- */
+
+function labFlagBadge(value, key) {
+  if (value == null || !Number.isFinite(Number(value))) return '';
+  const flag = S.labFlag(Number(value), key);
+  if (!flag) return `<span class="lab-badge lab-badge--info">${esc(nf(Number(value), 1))}</span>`;
+  const cls = flag === 'normal' ? 'lab-badge--normal'
+             : flag === 'high'   ? 'lab-badge--high'
+             :                     'lab-badge--low';
+  return `<span class="lab-badge ${cls}">${esc(nf(Number(value), 1))} <small style="font-weight:400">${esc(t('labs.flag' + flag.charAt(0).toUpperCase() + flag.slice(1)))}</small></span>`;
+}
+
+function labDashboardCard() {
+  const lab = S.latestLab();
+  if (!lab) {
+    return reminderCard({
+      go: 'labs', iconName: 'flask',
+      title: t('labs.dashboard'),
+      big: `<span style="font-size:var(--t-md);color:var(--fg-muted)">—</span>`,
+      sub: t('labs.noLab')
+    });
+  }
+  const dateStr = new Date(lab.ts).toLocaleDateString(localeTag(), { day: 'numeric', month: 'short', year: 'numeric' });
+  const items = [
+    { key: 'k',   label: 'K',   val: lab.k   },
+    { key: 'phos',label: 'Phos',val: lab.phos },
+    { key: 'na',  label: 'Na',  val: lab.na   },
+    { key: 'albumin', label: 'Alb', val: lab.albumin },
+    { key: 'hgb', label: 'Hgb', val: lab.hgb  },
+    { key: 'bun', label: 'BUN', val: lab.bun  }
+  ].filter(x => x.val != null);
+
+  return `
+  <button type="button" class="card chart-card" data-go="labs">
+    <div class="card__head">${icon('flask')}<h2>${esc(t('labs.dashboard'))}</h2></div>
+    <p class="hint" style="margin:var(--s-1) 0 var(--s-3)">${esc(t('labs.drawn'))}: ${esc(dateStr)}</p>
+    <div class="lab-dash-grid">
+      ${items.map(it => {
+        const flag = S.labFlag(Number(it.val), it.key);
+        const flagCls = flag === 'high' ? 'lab-badge--high'
+                      : flag === 'low'  ? 'lab-badge--low'
+                      : 'lab-badge--normal';
+        return `<div class="lab-dash-item">
+          <span class="stat__val tnum">${nf(Number(it.val), 1)} <span class="lab-badge ${flagCls}" style="font-size:10px;padding:1px 5px">${esc(flag ? t('labs.flag' + flag.charAt(0).toUpperCase() + flag.slice(1)) : '')}</span></span>
+          <span class="stat__key">${esc(it.label)}</span>
+        </div>`;
+      }).join('')}
+    </div>
+    <p class="banner" style="margin-top:var(--s-3);margin-bottom:0">${icon('info')}<span>${esc(t('labs.disclaimer'))}</span></p>
+  </button>`;
+}
+
 function viewToday() {
   // Uncalibrated scales silently bias every gain figure, so nudge once
   // there is a baseline to calibrate against.
@@ -782,10 +850,197 @@ function viewToday() {
       ${fluidReminder()}
       ${weightReminder()}
     </div>
+    ${foodReminder()}
     ${nextHdReminder()}
+    ${labDashboardCard()}
     ${calendarCard()}
     ${trendsSection()}
   </div>`;
+}
+
+/* ===================================================================
+   View: Labs — Laboratory Results
+   =================================================================== */
+
+/** Build a grouped table for one blood-draw record. */
+function labDrawCard(lab) {
+  const dateStr = new Date(lab.ts).toLocaleDateString(localeTag(),
+    { day: 'numeric', month: 'short', year: 'numeric' });
+
+  const GROUPS = [
+    {
+      titleKey: 'labs.tableElec',
+      rows: [
+        { key: 'k',           labelKey: 'labs.k',           unit: 'mEq/L' },
+        { key: 'na',          labelKey: 'labs.na',          unit: 'mEq/L' },
+        { key: 'bicarbonate', labelKey: 'labs.bicarbonate', unit: 'mEq/L' },
+        { key: 'calcium',     labelKey: 'labs.calcium',     unit: 'mg/dL' },
+        { key: 'uricAcid',    labelKey: 'labs.uricAcid',    unit: 'mg/dL' }
+      ]
+    },
+    {
+      titleKey: 'labs.tableKidney',
+      rows: [
+        { key: 'bun',        labelKey: 'labs.bun',        unit: 'mg/dL' },
+        { key: 'creatinine', labelKey: 'labs.creatinine', unit: 'mg/dL' },
+        { key: 'hgb',        labelKey: 'labs.hgb',        unit: 'g/dL'  }
+      ]
+    },
+    {
+      titleKey: 'labs.tableNutrition',
+      rows: [
+        { key: 'phos',    labelKey: 'labs.phos',    unit: 'mg/dL' },
+        { key: 'albumin', labelKey: 'labs.albumin', unit: 'g/dL'  }
+      ]
+    }
+  ];
+
+  const groupHtml = GROUPS.map(grp => {
+    const visibleRows = grp.rows.filter(r => lab[r.key] != null);
+    if (!visibleRows.length) return '';
+    const rowsHtml = visibleRows.map(r => {
+      const val   = Number(lab[r.key]);
+      const flag  = S.labFlag(val, r.key);
+      const trCls = flag && flag !== 'normal' ? `lab-tr--${flag}` : '';
+      const badgeCls = flag === 'normal' ? 'lab-badge--normal'
+                     : flag === 'high'   ? 'lab-badge--high'
+                     : flag === 'low'    ? 'lab-badge--low'
+                     :                    'lab-badge--info';
+      const badgeLabel = flag ? esc(t('labs.flag' + flag.charAt(0).toUpperCase() + flag.slice(1))) : '—';
+      return `<tr class="${trCls}">
+        <td class="lab-td__name">${esc(t(r.labelKey))}</td>
+        <td class="lab-td__val tnum">${nf(val, 2)}</td>
+        <td class="lab-td__unit">${r.unit}</td>
+        <td class="lab-td__flag"><span class="lab-badge ${badgeCls}">${badgeLabel}</span></td>
+      </tr>`;
+    }).join('');
+    return `
+      <p class="lab-group-title">${esc(t(grp.titleKey))}</p>
+      <div class="lab-table-scroll">
+        <table class="lab-table">
+          <thead><tr>
+            <th class="lab-td__name">${esc(t('labs.title'))}</th>
+            <th class="lab-td__val">Value</th>
+            <th class="lab-td__unit">Unit</th>
+            <th class="lab-td__flag">Status</th>
+          </tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>`;
+  }).join('');
+
+  const noteHtml = lab.note
+    ? `<p class="hint" style="padding:var(--s-2) var(--s-4)">${esc(lab.note)}</p>`
+    : '';
+
+  return `
+  <div class="lab-draw-card card" style="padding:0">
+    <div class="lab-draw-head">
+      <h3>${esc(dateStr)}</h3>
+      <button type="button" class="row__btn" data-del-lab="${lab.id}"
+              aria-label="${esc(t('common.delete'))} ${esc(dateStr)}">${icon('trash')}</button>
+    </div>
+    ${groupHtml}
+    ${noteHtml}
+  </div>`;
+}
+
+function viewLabs() {
+  const logs = S.getLabLogs();
+  return `
+  <div class="view">
+    <button type="button" class="btn btn--primary" id="btnAddLab" style="width:100%;margin-bottom:var(--s-4)">
+      ${icon('plus')}<span>${esc(t('labs.addBtn'))}</span>
+    </button>
+    <p class="banner">${icon('info')}<span>${esc(t('labs.disclaimer'))}</span></p>
+    ${logs.length
+      ? logs.map(lab => labDrawCard(lab)).join('')
+      : `<div class="empty">${icon('flask')}<p>${esc(t('labs.empty'))}</p></div>`}
+  </div>`;
+}
+
+/** Bottom sheet to add a new blood-draw record. */
+function sheetLabEntry() {
+  const today = new Date().toISOString().slice(0, 10);
+  const FIELDS = [
+    { id: 'lK',   label: 'labs.k',           unit: 'mEq/L', step: '0.1', min: '1',   max: '10',  placeholder: '4.5' },
+    { id: 'lPhos',label: 'labs.phos',         unit: 'mg/dL', step: '0.1', min: '0.5', max: '15',  placeholder: '4.5' },
+    { id: 'lNa',  label: 'labs.na',           unit: 'mEq/L', step: '0.1', min: '100', max: '170', placeholder: '138' },
+    { id: 'lAlb', label: 'labs.albumin',      unit: 'g/dL',  step: '0.1', min: '1',   max: '6',   placeholder: '3.8' },
+    { id: 'lHgb', label: 'labs.hgb',          unit: 'g/dL',  step: '0.1', min: '4',   max: '20',  placeholder: '11'  },
+    { id: 'lBun', label: 'labs.bun',          unit: 'mg/dL', step: '1',   min: '1',   max: '400', placeholder: '60'  },
+    { id: 'lCr',  label: 'labs.creatinine',   unit: 'mg/dL', step: '0.1', min: '0.1', max: '30',  placeholder: '8.5' },
+    { id: 'lHco', label: 'labs.bicarbonate',  unit: 'mEq/L', step: '0.1', min: '5',   max: '40',  placeholder: '20'  },
+    { id: 'lCa',  label: 'labs.calcium',      unit: 'mg/dL', step: '0.1', min: '5',   max: '15',  placeholder: '9.2' },
+    { id: 'lUa',  label: 'labs.uricAcid',     unit: 'mg/dL', step: '0.1', min: '1',   max: '20',  placeholder: '6.5' }
+  ];
+
+  openSheet({
+    title: t('labs.sheetTitle'),
+    body: `
+      <div class="field">
+        <label for="lDate">${esc(t('labs.date'))} <span class="req">*</span></label>
+        <input class="input" id="lDate" type="date" value="${today}">
+        <div class="err" id="lDate-err" role="alert" aria-live="polite"></div>
+      </div>
+      <div class="field-row">
+        ${FIELDS.slice(0, 4).map(f => `
+          <div class="field">
+            <label for="${f.id}">${esc(t(f.label))} <small style="font-weight:400;color:var(--fg-muted)">${f.unit}</small></label>
+            <input class="input" id="${f.id}" type="number" inputmode="decimal"
+                   step="${f.step}" min="${f.min}" max="${f.max}" placeholder="${f.placeholder}" autocomplete="off">
+          </div>`).join('')}
+      </div>
+      <div class="field-row">
+        ${FIELDS.slice(4).map(f => `
+          <div class="field">
+            <label for="${f.id}">${esc(t(f.label))} <small style="font-weight:400;color:var(--fg-muted)">${f.unit}</small></label>
+            <input class="input" id="${f.id}" type="number" inputmode="decimal"
+                   step="${f.step}" min="${f.min}" max="${f.max}" placeholder="${f.placeholder}" autocomplete="off">
+          </div>`).join('')}
+      </div>
+      <div class="field">
+        <label for="lNote">${esc(t('labs.note'))}</label>
+        <input class="input" id="lNote" type="text" maxlength="300" autocomplete="off"
+               placeholder="e.g. pre-dialysis draw, fasting">
+      </div>
+      <p class="banner">${icon('info')}<span>${esc(t('labs.disclaimer'))}</span></p>
+      <button type="button" class="btn btn--primary" id="lSave" style="width:100%">
+        ${icon('check')}<span>${esc(t('common.save'))}</span>
+      </button>`,
+    onMount(sheet) {
+      $('#lSave', sheet).addEventListener('click', () => {
+        const dateVal = $('#lDate', sheet).value;
+        if (!dateVal) {
+          const errEl = $('#lDate-err', sheet);
+          if (errEl) errEl.textContent = t('common.required');
+          $('#lDate', sheet).focus();
+          return;
+        }
+        const readVal = id => {
+          const el = $(id, sheet);
+          const v = el ? el.value.trim() : '';
+          return v === '' ? null : Number(v);
+        };
+        const entry = S.logLab({
+          day:         dateVal,
+          k:           readVal('#lK'),
+          phos:        readVal('#lPhos'),
+          na:          readVal('#lNa'),
+          albumin:     readVal('#lAlb'),
+          hgb:         readVal('#lHgb'),
+          bun:         readVal('#lBun'),
+          creatinine:  readVal('#lCr'),
+          bicarbonate: readVal('#lHco'),
+          calcium:     readVal('#lCa'),
+          uricAcid:    readVal('#lUa'),
+          note:        $('#lNote', sheet)?.value.trim() || ''
+        }, new Date(dateVal + 'T12:00:00'));
+        closeSheet();
+        toast(t('labs.saved'), t('common.undo'), () => S.deleteLab(entry.id));
+      });
+    }
+  });
 }
 
 /* ===================================================================
@@ -1015,6 +1270,409 @@ function sheetMedication(medId) {
 }
 
 /* ===================================================================
+   View: Food tracker (potassium / sodium) — ported concept from FoodYou
+   -------------------------------------------------------------------
+   Dialysis patients cannot clear potassium or sodium between sessions.
+   High potassium can stop the heart; high sodium drives thirst, fluid
+   overload and high blood pressure. This tab flags high-K / high-Na
+   foods BEFORE the patient eats, and sounds an alarm when a logged food
+   is dangerous or the day's budget is blown.
+   =================================================================== */
+
+/** Attention-grabbing alarm for a high-mineral food: buzz the phone and
+    play a short two-tone beep. Both are best-effort — vibration needs a
+    real device; WebAudio needs a prior user gesture, which the tap that
+    triggered this satisfies. */
+function foodAlarm() {
+  try { navigator.vibrate?.([180, 90, 180, 90, 280]); } catch { /* unsupported */ }
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    const ctx = new AC();
+    const beep = (freq, start, dur) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'square'; o.frequency.value = freq;
+      o.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.0001, ctx.currentTime + start);
+      g.gain.exponentialRampToValueAtTime(0.28, ctx.currentTime + start + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + dur);
+      o.start(ctx.currentTime + start);
+      o.stop(ctx.currentTime + start + dur + 0.03);
+    };
+    beep(880, 0, 0.18); beep(880, 0.26, 0.32);
+    setTimeout(() => { try { ctx.close(); } catch {} }, 1000);
+  } catch { /* audio blocked; vibration/visuals still fired */ }
+}
+
+/** One coloured chip: "K 420 mg" tinted ok / moderate / high. */
+/* Minimal reading, not a filled chip: a muted "K 420 mg" with a small dot
+   that only shows colour when there is something to flag. Used in the
+   portion sheet's live projection, where a loud badge would fight with
+   the sheet's own alarm banner for attention. */
+const MINERAL_LABEL = { k: 'K', na: 'Na', ph: 'P' };
+function mineralBadge(mg, kind) {
+  const lvl = mineralLevel(mg, kind);
+  const dot = lvl === 'ok' ? '' : ` <i class="fdot fdot--${lvl}"></i>`;
+  return `<span class="freading">${MINERAL_LABEL[kind]} ${Math.round(mg)} ${esc(t('common.mg'))}${dot}</span>`;
+}
+
+/** One stat column inside the MyFitnessPal-style diary summary: Goal,
+    Food (logged so far) and Remaining, the same triplet MFP's calorie
+    card shows, with Remaining the one large emphasised number. Handles
+    all three tracked numbers — kcal plus the two minerals — since kcal
+    has no "mg" unit and its own goal/band lookups. */
+function summaryCol(kind) {
+  const totals = S.todayFoodTotals();
+  const p = S.getProfile();
+  const cfg = {
+    kcal: { total: totals.kcal, limit: p.kcalGoal,                     band: S.kcalBand(),       title: t('food.calories'),   unit: '' },
+    k:    { total: totals.k,    limit: S.effectivePotassiumLimitMg(p),  band: S.potassiumBand(),  title: t('food.potassium'),  unit: ` ${t('common.mg')}` },
+    na:   { total: totals.na,   limit: p.sodiumLimitMg,                band: S.sodiumBand(),     title: t('food.sodium'),     unit: ` ${t('common.mg')}` },
+    ph:   { total: totals.ph,   limit: S.effectivePhosphorusLimitMg(p), band: S.phosphorusBand(), title: t('food.phosphorus'), unit: ` ${t('common.mg')}` }
+  }[kind];
+  const b = cfg.band || 'ok';
+  const remaining = cfg.limit - cfg.total;
+  const remColor = b === 'danger' ? 'var(--danger)' : b === 'warn' ? 'var(--warn)' : 'var(--brand)';
+  return `
+  <div class="mfp-col">
+    <p class="mfp-col__label">${esc(cfg.title)}</p>
+    <p class="mfp-col__remaining tnum" style="color:${remColor}">
+      ${remaining < 0 ? Math.round(-remaining) : Math.round(remaining)}
+    </p>
+    <p class="mfp-col__remaining-caption">${esc(remaining < 0 ? t('food.over') : t('food.remaining'))}</p>
+    <p class="mfp-col__breakdown tnum">
+      <span>${esc(t('food.goal'))} <b>${Math.round(cfg.limit)}${esc(cfg.unit)}</b></span>
+      <span>${esc(t('food.foodCol'))} <b>${Math.round(cfg.total)}${esc(cfg.unit)}</b></span>
+    </p>
+  </div>`;
+}
+
+/** The diary's top summary card — MyFitnessPal's calorie card, extended
+    with the three KDOQI ceiling nutrients (potassium, sodium, phosphorus)
+    alongside kcal. Calories lead, same order MFP itself uses; wraps to
+    2×2 on a narrow phone instead of squeezing four columns into one row. */
+function foodSummaryCard() {
+  const cols = ['kcal', 'k', 'na', 'ph'];
+  return `
+  <div class="card mfp-summary">
+    ${cols.map(summaryCol).join('<div class="mfp-summary__divider"></div>')}
+  </div>`;
+}
+
+/** Protein and fiber are daily MINIMUMS (KDOQI: 1.0-1.2 g/kg protein,
+    25-34 g fiber) — "more is good, up to the goal" instead of "less is
+    good", so this reuses the .meter component but with goal-progress
+    framing (X of Y met) rather than the K/Na/kcal "remaining" framing. */
+function goalBar(kind) {
+  const totals = S.todayFoodTotals();
+  const p = S.getProfile();
+  const cfg = kind === 'fiber'
+    ? { total: totals.fiber,   goal: p.fiberGoalG,               band: S.fiberBand(),   title: t('food.fiber'),   unit: t('common.g'), icon: 'bowl' }
+    : { total: totals.protein, goal: S.effectiveProteinGoalG(p), band: S.proteinBand(), title: t('food.protein'), unit: t('common.g'), icon: 'activity' };
+  const b = cfg.band || 'ok';
+  const pct = Math.min(100, Math.max(0, (cfg.total / (cfg.goal || 1)) * 100));
+  return `
+  <div class="card">
+    <div class="card__head">${icon(cfg.icon)}<h2>${esc(cfg.title)}</h2></div>
+    <p class="status__num tnum" style="font-size:var(--t-xl);margin:0;color:${
+      b === 'ok' ? 'var(--ok)' : b === 'warn' ? 'var(--warn)' : 'var(--danger)'}">
+      ${nf(cfg.total, 1)}<span class="status__unit"> / ${cfg.goal} ${esc(cfg.unit)}</span>
+    </p>
+    <div class="meter meter--${b === 'ok' ? 'ok' : b === 'warn' ? 'warn' : 'danger'}">
+      <div class="meter__track">
+        <div class="meter__fill" style="width:${pct}%" role="progressbar"
+             aria-valuenow="${nf(cfg.total, 1)}" aria-valuemin="0" aria-valuemax="${cfg.goal}"
+             aria-label="${esc(cfg.title)}"></div>
+      </div>
+      <p class="meter__scale">
+        <span>0</span><span class="tnum">${esc(t('food.goal'))}: ${cfg.goal} ${esc(cfg.unit)}</span>
+      </p>
+    </div>
+    ${b === 'danger' ? `<p class="status__advice" style="margin-top:var(--s-3)">${icon('info')}<span>${esc(t('food.' + kind + 'LowAdvice'))}</span></p>` : ''}
+  </div>`;
+}
+
+/* Minimalist catalog: a flat list of rows, not a grid of coloured cards.
+   Each row is plain text plus two muted numbers; the only colour is the
+   small dot from mineralBadge() when a food actually needs a second
+   look, so the eye lands on the two or three foods that matter instead
+   of a wall of tinted tiles. */
+/** Search-first, like MFP's own "Add Food" screen: no wall of every food
+    in the database on open, just the search box. Results (grouped by
+    category) appear once the patient actually types something. */
+function foodCatalog(filter = '') {
+  const q = filter.trim().toLowerCase();
+  if (!q) return `<p class="food-search-hint">${esc(t('food.searchHint'))}</p>`;
+  const html = FOOD_CATS.map(cat => {
+    const items = FOOD_DB.filter(f => f.cat === cat.id && f.name.toLowerCase().includes(q));
+    if (!items.length) return '';
+    return `
+    <h3 class="section-title food-cat">${esc(t('food.cat.' + cat.id))}</h3>
+    <div class="food-list">
+      ${items.map(f => `
+        <button type="button" class="food-row" data-food="${f.id}">
+          <span class="food-row__name">${esc(f.name)}
+            <small class="food-row__serving">${esc(f.serving)}${
+              f.g ? ` · ${f.g} ${esc(t('common.g'))}` : ''}${
+              f.ml ? ` · ${f.ml} ${esc(t('common.ml'))}` : ''}</small>
+          </span>
+          <span class="food-row__nums">
+            <span class="freading">${f.kcal} ${esc(t('common.kcal'))}</span>
+            ${mineralBadge(f.k, 'k')}${mineralBadge(f.na, 'na')}${mineralBadge(f.ph, 'ph')}
+          </span>
+        </button>`).join('')}
+    </div>`;
+  }).join('');
+  return html || `<p class="food-search-hint">${esc(t('food.noResults'))}</p>`;
+}
+
+/** One meal section — Breakfast, Lunch, Dinner — laid out the way
+    MyFitnessPal's diary does: a header row with the meal name and its
+    running total, a plain <table> of what was logged, and an "+ Add
+    Food" row at the bottom that opens the picker scoped to this meal.
+    Always rendered, even empty, so all three meals are there to log
+    into as the day goes rather than appearing only after first use. */
+function mealTable(mealKey, entries) {
+  const rows = entries.map(e => {
+    const kLvl = mineralLevel(e.kMg, 'k'), naLvl = mineralLevel(e.naMg, 'na'), phLvl = mineralLevel(e.phMg, 'ph');
+    const hot = kLvl === 'high' || naLvl === 'high' || phLvl === 'high';
+    return `
+    <tr class="${hot ? 'food-tr--hot' : ''}">
+      <td class="food-td__name">${esc(e.name)}${
+        e.servings !== 1 ? ` <small class="tnum">×${nf(e.servings, 1)}</small>` : ''}</td>
+      <td class="food-td__num tnum">${e.kcal}</td>
+      <td class="food-td__num tnum">${e.kMg}</td>
+      <td class="food-td__num tnum">${e.naMg}</td>
+      <td class="food-td__num tnum">${e.phMg}</td>
+      <td class="food-td__del">
+        <button type="button" class="row__btn" data-del-food="${e.id}"
+                aria-label="${esc(t('common.delete'))} ${esc(e.name)}">${icon('trash')}</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const sub = entries.reduce((a, e) =>
+    ({ kcal: a.kcal + e.kcal, k: a.k + e.kMg, na: a.na + e.naMg, ph: a.ph + e.phMg }),
+    { kcal: 0, k: 0, na: 0, ph: 0 });
+
+  return `
+  <div class="card meal-section">
+    <div class="meal-section__head">
+      <h3>${esc(t('food.meal.' + mealKey))}</h3>
+      ${entries.length
+        ? `<span class="meal-section__total tnum">${sub.kcal} ${esc(t('common.kcal'))} · K ${sub.k} · Na ${sub.na} · P ${sub.ph} ${esc(t('common.mg'))}</span>`
+        : ''}
+    </div>
+    <div class="food-table-scroll">
+      <table class="food-table">
+        <thead><tr>
+          <th class="food-td__name">${esc(t('food.colFood'))}</th>
+          <th class="food-td__num">${esc(t('food.colKcal'))}</th>
+          <th class="food-td__num">K</th>
+          <th class="food-td__num">Na</th>
+          <th class="food-td__num">P</th>
+          <th class="food-td__del"></th>
+        </tr></thead>
+        <tbody>
+          ${rows || `<tr><td class="food-td__empty" colspan="6">${esc(t('food.mealEmpty'))}</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+    <button type="button" class="add-food-row" data-add-meal="${mealKey}">
+      ${icon('plus')}<span>${esc(t('food.addFood'))}</span>
+    </button>
+  </div>`;
+}
+
+function foodLogTables() {
+  const byMeal = S.todayFoodByMeal();
+  return S.MEALS.map(m => mealTable(m, byMeal[m])).join('');
+}
+
+function viewFood() {
+  const over = S.potassiumBand() === 'danger' || S.sodiumBand() === 'danger' || S.phosphorusBand() === 'danger';
+  return `
+  <div class="view">
+    ${over ? `<p class="banner banner--danger">${icon('alert-octagon')}<span>${esc(t('food.overAlarm'))}</span></p>` : ''}
+    ${foodSummaryCard()}
+    <div class="today-grid-2">
+      ${goalBar('protein')}
+      ${goalBar('fiber')}
+    </div>
+    <p class="banner">${icon('info')}<span>${esc(t('food.estimate'))}</span></p>
+    ${foodLogTables()}
+  </div>`;
+}
+
+/* Search text lives in module state so a store-driven re-render (e.g. an
+   undo toast firing emit) keeps whatever the patient has typed. */
+let foodSearch = '';
+
+/** Food picker — MyFitnessPal's "Add Food" search screen, opened from a
+    meal section's "+ Add Food" row. Search + the same minimalist
+    catalog list used before; tapping a food hands off to the portion
+    sheet with this meal already selected. */
+function sheetFoodPicker(meal) {
+  foodSearch = '';
+  openSheet({
+    title: `${t('food.addFood')} — ${t('food.meal.' + meal)}`,
+    body: `
+      <div class="field" style="margin-bottom:var(--s-2)">
+        <input class="input" id="foodSearch" type="search" enterkeyhint="search"
+               placeholder="${esc(t('food.search'))}" autocomplete="off">
+      </div>
+      <div id="foodCatalog">${foodCatalog('')}</div>`,
+    onMount(sheet) {
+      $('#foodSearch', sheet).focus();
+      $('#foodSearch', sheet).addEventListener('input', e => {
+        foodSearch = e.target.value;
+        $('#foodCatalog', sheet).innerHTML = foodCatalog(foodSearch);
+      });
+      sheet.addEventListener('click', e => {
+        const row = e.target.closest('[data-food]');
+        if (!row) return;
+        // [data-food] is also in the document-level delegated selector
+        // (for the picker's own rows to be clickable at all); stop here
+        // so that handler doesn't ALSO fire and open a second, meal-less
+        // portion sheet right behind this one.
+        e.stopPropagation();
+        closeSheet();
+        sheetFoodLog(row.dataset.food, meal);
+      });
+    }
+  });
+}
+
+/** Portion picker + alarm gate. Recomputes the projected K/Na live as the
+    patient changes servings; a high projection turns the save button red
+    and the warning banner on, and sounds the alarm on log. */
+function sheetFoodLog(foodId, presetMeal = null) {
+  const f = findFood(foodId);
+  if (!f) return;
+  const defaultMeal = S.MEALS.includes(presetMeal) ? presetMeal : S.inferMeal();
+
+  const g1 = f.g || 0;  // grams in ONE serving, for the servings<->grams sync below
+
+  openSheet({
+    title: f.name,
+    body: `
+      <p class="hint" style="margin-top:0">${esc(f.serving)}${
+        g1 ? ` · ${g1} ${esc(t('common.g'))}` : ''}${
+        f.ml ? ` · ${f.ml} ${esc(t('common.ml'))} ${esc(t('food.alsoFluid'))}` : ''}</p>
+
+      <div class="field">
+        <label>${esc(t('food.meal'))}</label>
+        <div class="seg" role="group" aria-label="${esc(t('food.meal'))}">
+          ${S.MEALS.map(m => `<button type="button" data-meal="${m}"
+              aria-pressed="${m === defaultMeal}">${esc(t('food.meal.' + m))}</button>`).join('')}
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="fServ">${esc(t('food.servings'))}</label>
+        <div class="seg" role="group" aria-label="${esc(t('food.servings'))}">
+          <button type="button" data-serv="0.5">½</button>
+          <button type="button" data-serv="1">1</button>
+          <button type="button" data-serv="2">2</button>
+          <button type="button" data-serv="3">3</button>
+        </div>
+        <input class="input input--big" id="fServ" type="number" inputmode="decimal"
+               step="0.5" min="0.5" max="20" value="1" style="margin-top:var(--s-2)">
+        <div class="err" id="fServ-err" role="alert" aria-live="polite"></div>
+      </div>
+
+      ${g1 ? `
+      <div class="field">
+        <label for="fGrams">${esc(t('food.gramsLabel'))}</label>
+        <input class="input" id="fGrams" type="number" inputmode="numeric"
+               step="1" min="1" max="${Math.round(g1 * 20)}" value="${g1}">
+        <div class="err" id="fGrams-err" role="alert" aria-live="polite"></div>
+        <p class="hint">${esc(t('food.gramsHint'))}</p>
+      </div>` : ''}
+
+      <div class="fproj" id="fProj" aria-live="polite"></div>
+      <div class="banner banner--danger" id="fWarn" hidden>
+        ${icon('alert-octagon')}<span></span>
+      </div>
+
+      <button type="button" class="btn btn--primary" id="fSave">
+        ${icon('check')}<span>${esc(t('common.save'))}</span>
+      </button>`,
+    onMount(sheet) {
+      const input = $('#fServ', sheet);
+      const grams = $('#fGrams', sheet);
+      const proj  = $('#fProj', sheet);
+      const warn  = $('#fWarn', sheet);
+      const btn   = $('#fSave', sheet);
+      let meal = defaultMeal;
+
+      $$('[data-meal]', sheet).forEach(b => b.addEventListener('click', () => {
+        meal = b.dataset.meal;
+        $$('[data-meal]', sheet).forEach(x => x.setAttribute('aria-pressed', x === b));
+      }));
+
+      /* Servings and grams are the same quantity read two ways — keep
+         them in lockstep so a patient can either tap "2 servings" or
+         type "236g" off a kitchen scale and get the same log entry.
+         Only ever one side re-renders the other, never both at once,
+         so there's no feedback loop. */
+      const syncGramsFromServings = () => {
+        if (g1) grams.value = Math.round((Number(input.value) || 0) * g1);
+      };
+      const syncServingsFromGrams = () => {
+        if (g1) input.value = (Math.round((Number(grams.value) || 0) / g1 * 100) / 100).toString();
+      };
+
+      const refresh = () => {
+        const s = Number(input.value) || 0;
+        const k = f.k * s, na = f.na * s, ph = (f.ph || 0) * s;
+        const protein = (f.protein || 0) * s, fiber = (f.fiber || 0) * s;
+        proj.innerHTML = `<span class="freading">${Math.round((f.kcal || 0) * s)} ${esc(t('common.kcal'))}</span>` +
+          ` ${mineralBadge(k, 'k')} ${mineralBadge(na, 'na')} ${mineralBadge(ph, 'ph')}` +
+          ` <span class="freading">${nf(protein, 1)}${esc(t('common.g'))} ${esc(t('food.protein'))}</span>` +
+          ` <span class="freading">${nf(fiber, 1)}${esc(t('common.g'))} ${esc(t('food.fiber'))}</span>`;
+
+        const hot = { k: mineralLevel(k, 'k') === 'high', na: mineralLevel(na, 'na') === 'high', ph: mineralLevel(ph, 'ph') === 'high' };
+        const hotKinds = Object.keys(hot).filter(kind => hot[kind]);
+        const high = hotKinds.length > 0;
+        warn.hidden = !high;
+        if (high) {
+          const label = { k: t('food.kHigh'), na: t('food.naHigh'), ph: t('food.phHigh') };
+          warn.querySelector('span').textContent = hotKinds.length > 1
+            ? t('food.multiHigh')
+            : label[hotKinds[0]];
+        }
+        btn.classList.toggle('btn--danger', high);
+        btn.classList.toggle('btn--primary', !high);
+        btn.querySelector('span').textContent = high ? t('food.logAnyway') : t('common.save');
+        return { s, high };
+      };
+
+      $$('[data-serv]', sheet).forEach(b =>
+        b.addEventListener('click', () => { input.value = b.dataset.serv; syncGramsFromServings(); refresh(); }));
+      input.addEventListener('input', () => { syncGramsFromServings(); refresh(); });
+      grams?.addEventListener('input', () => { syncServingsFromGrams(); refresh(); });
+      refresh();
+
+      const save = () => {
+        const s = readNumber(input, { min: 0.5, max: 20 });
+        if (s == null) { input.focus(); return; }
+        const { high } = refresh();
+        const entry = S.logFood(f.id, s, new Date(), meal);
+        closeSheet();
+        if (high) {
+          foodAlarm();
+          toast(t('food.loggedHigh'), t('common.undo'), () => S.deleteFood(entry.id));
+        } else {
+          toast(t('food.logged'), t('common.undo'), () => S.deleteFood(entry.id));
+        }
+      };
+      btn.addEventListener('click', save);
+    }
+  });
+}
+
+/* ===================================================================
    View: Dialysis sessions & Pre-dialysis checklist
    =================================================================== */
 
@@ -1089,6 +1747,17 @@ function viewSession() {
 
 function viewSettings() {
   const p = S.getProfile();
+  const kcalSuggest = S.recommendedKcalRange(p);
+  const proteinSuggest = S.recommendedProteinRange(p);
+  // Whether each goal is CURRENTLY locked to a lab-derived number —
+  // Auto can be on with no lab yet, in which case there's nothing to
+  // lock to and the field stays a normal manual input.
+  const kAuto = p.autoGoalsFromLabs && !!S.recommendedPotassiumRangeFromLab(p);
+  const phAuto = p.autoGoalsFromLabs && !!S.recommendedPhosphorusRangeFromLab(p);
+  const proteinAuto = p.autoGoalsFromLabs && !!p.dryWeightKg;
+  const effK = S.effectivePotassiumLimitMg(p);
+  const effPh = S.effectivePhosphorusLimitMg(p);
+  const effProtein = S.effectiveProteinGoalG(p);
   return `
   <div class="view">
     <p class="settings-intro">SKTI — SPMC Kidney and Transplant Institute, Davao City</p>
@@ -1134,6 +1803,11 @@ function viewSettings() {
 
     <h2 class="section-title">${esc(t('settings.targets'))}</h2>
     <div class="card">
+      <div class="field" style="display:flex;align-items:center;gap:var(--s-2)">
+        <input type="checkbox" id="pAutoGoals" ${p.autoGoalsFromLabs ? 'checked' : ''}>
+        <label for="pAutoGoals" style="margin:0">${esc(t('settings.autoGoals'))}</label>
+      </div>
+      <p class="hint">${esc(t('settings.autoGoalsHint'))}</p>
       <div class="field">
         <label for="pDry">${esc(t('settings.dryWeight'))}</label>
         <input class="input" id="pDry" type="number" inputmode="decimal" step="0.1"
@@ -1155,6 +1829,98 @@ function viewSettings() {
         <div class="err" id="pIdwg-err" role="alert" aria-live="polite"></div>
         <p class="hint">${esc(t('settings.idwgHint'))}</p>
       </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="pK">${esc(t('settings.potassiumLimit'))}</label>
+          <input class="input" id="pK" type="number" inputmode="numeric" step="100"
+                 min="500" max="5000" value="${(kAuto ? effK : p.potassiumLimitMg) ?? 2000}"
+                 ${kAuto ? 'disabled' : ''}>
+          <div class="err" id="pK-err" role="alert" aria-live="polite"></div>
+          ${kAuto ? `<p class="hint">${esc(t('settings.autoLocked'))}</p>` : ''}
+        </div>
+        <div class="field">
+          <label for="pNa">${esc(t('settings.sodiumLimit'))}</label>
+          <input class="input" id="pNa" type="number" inputmode="numeric" step="100"
+                 min="500" max="5000" value="${p.sodiumLimitMg ?? 2300}">
+          <div class="err" id="pNa-err" role="alert" aria-live="polite"></div>
+        </div>
+      </div>
+      <p class="hint">${esc(t('settings.mineralHint'))}</p>
+      <div class="field">
+        <label for="pPh">${esc(t('settings.phosphorusLimit'))}</label>
+        <input class="input" id="pPh" type="number" inputmode="numeric" step="50"
+               min="300" max="3000" value="${(phAuto ? effPh : p.phosphorusLimitMg) ?? 900}"
+               ${phAuto ? 'disabled' : ''}>
+        <div class="err" id="pPh-err" role="alert" aria-live="polite"></div>
+        <p class="hint">${esc(t('settings.phosphorusHint'))}${phAuto ? ` ${esc(t('settings.autoLocked'))}` : ''}</p>
+      </div>
+      <div class="field">
+        <label for="pKcal">${esc(t('settings.kcalGoal'))}</label>
+        <input class="input" id="pKcal" type="number" inputmode="numeric" step="50"
+               min="800" max="5000" value="${p.kcalGoal ?? 1800}">
+        <div class="err" id="pKcal-err" role="alert" aria-live="polite"></div>
+        <p class="hint">${esc(t('settings.kcalHint'))}${
+          kcalSuggest ? ` ${esc(t('settings.suggested'))}: ${kcalSuggest.low}–${kcalSuggest.high} ${esc(t('common.kcal'))}.` : ''}</p>
+      </div>
+      <div class="field">
+        <label for="pProtein">${esc(t('settings.proteinGoal'))}</label>
+        <input class="input" id="pProtein" type="number" inputmode="numeric" step="5"
+               min="20" max="250" value="${(proteinAuto ? effProtein : p.proteinGoalG) ?? 60}"
+               ${proteinAuto ? 'disabled' : ''}>
+        <div class="err" id="pProtein-err" role="alert" aria-live="polite"></div>
+        ${proteinAuto ? `<p class="hint">${esc(t('settings.autoLocked'))}</p>` : ''}
+        <p class="hint">${esc(t('settings.proteinHint'))}${
+          proteinSuggest ? ` ${esc(t('settings.suggested'))}: ${proteinSuggest.low}–${proteinSuggest.high} ${esc(t('common.g'))}.` : ''}</p>
+      </div>
+      <div class="field">
+        <label for="pFiber">${esc(t('settings.fiberGoal'))}</label>
+        <input class="input" id="pFiber" type="number" inputmode="numeric" step="1"
+               min="10" max="60" value="${p.fiberGoalG ?? 30}">
+        <div class="err" id="pFiber-err" role="alert" aria-live="polite"></div>
+        <p class="hint">${esc(t('settings.fiberHint'))}</p>
+      </div>
+
+      <h3 class="section-title" style="margin-top:var(--s-5)">${esc(t('settings.labTitle'))}</h3>
+      <p class="hint" style="margin-top:0">${esc(t('settings.labHint'))}</p>
+      ${(() => {
+        const lab = S.latestLab();
+        const labKSuggest = S.recommendedPotassiumRangeFromLab(p);
+        const labPhSuggest = S.recommendedPhosphorusRangeFromLab(p);
+        if (!lab) return `
+          <p class="hint">${esc(t('labs.noLab'))}</p>
+          <button type="button" class="btn btn--ghost" data-go="labs" style="width:100%">
+            ${icon('flask')}<span>${esc(t('labs.addBtn'))}</span>
+          </button>`;
+        const dateStr = new Date(lab.ts).toLocaleDateString(localeTag(),
+          { day: 'numeric', month: 'short', year: 'numeric' });
+        return `
+          <div class="row" style="margin-bottom:var(--s-2)">
+            <span class="row__icon">${icon('flask')}</span>
+            <span class="row__body">
+              <span class="row__title">${esc(t('labs.drawn'))}: ${esc(dateStr)}</span>
+              <span class="row__sub tnum">
+                ${lab.k    != null ? `K ${nf(lab.k,1)} · ` : ''}
+                ${lab.phos != null ? `Phos ${nf(lab.phos,1)} · ` : ''}
+                ${lab.na   != null ? `Na ${nf(lab.na,1)}` : ''}
+              </span>
+            </span>
+            <button type="button" class="row__btn" data-go="labs" aria-label="${esc(t('labs.title'))}">${icon('chevron-right')}</button>
+          </div>
+          ${labKSuggest ? `
+          <p class="hint">${esc(t('settings.labKFlag.' + labKSuggest.flag))}
+            ${esc(t('settings.suggested'))}: ${labKSuggest.low}–${labKSuggest.high} ${esc(t('common.mg'))}.
+            ${p.autoGoalsFromLabs ? esc(t('settings.autoLocked')) : `<button type="button" class="row__btn" data-apply-lab="k" data-lo="${labKSuggest.low}" data-hi="${labKSuggest.high}"
+                    aria-label="${esc(t('settings.labApply'))}" style="display:inline-flex;vertical-align:middle">${icon('check')}</button>`}
+          </p>` : ''}
+          ${labPhSuggest ? `
+          <p class="hint">${esc(t('settings.labPhFlag.' + labPhSuggest.flag))}
+            ${esc(t('settings.suggested'))}: ${labPhSuggest.low}–${labPhSuggest.high} ${esc(t('common.mg'))}.
+            ${p.autoGoalsFromLabs ? esc(t('settings.autoLocked')) : `<button type="button" class="row__btn" data-apply-lab="ph" data-lo="${labPhSuggest.low}" data-hi="${labPhSuggest.high}"
+                    aria-label="${esc(t('settings.labApply'))}" style="display:inline-flex;vertical-align:middle">${icon('check')}</button>`}
+          </p>` : ''}`;
+      })()}
+      <p class="banner">${icon('info')}<span>${esc(t('settings.labDisclaimer'))}</span></p>
+
       <div class="field">
         <label>${esc(t('settings.schedule'))}</label>
         <div class="seg" role="group" aria-label="${esc(t('settings.schedule'))}">
@@ -1320,6 +2086,14 @@ function printSummary() {
               / limit ${nf(s.limitKg, 1)} kg</span></li>
         <li class="row"><span class="row__body">Fluid today</span>
             <span class="row__val tnum">${s.todayIntakeMl} mL</span></li>
+        <li class="row"><span class="row__body">Calories today</span>
+            <span class="row__val tnum">${S.todayFoodTotals().kcal} kcal (goal ${p.kcalGoal})</span></li>
+        <li class="row"><span class="row__body">Potassium / Sodium / Phosphorus today</span>
+            <span class="row__val tnum">${S.todayFoodTotals().k} / ${S.todayFoodTotals().na} / ${S.todayFoodTotals().ph} mg
+              (limit ${p.potassiumLimitMg}/${p.sodiumLimitMg}/${p.phosphorusLimitMg})</span></li>
+        <li class="row"><span class="row__body">Protein / Fiber today</span>
+            <span class="row__val tnum">${nf(S.todayFoodTotals().protein, 1)} / ${nf(S.todayFoodTotals().fiber, 1)} g
+              (goal ${p.proteinGoalG}/${p.fiberGoalG})</span></li>
       </ul>
       <h3 style="margin-top:16px">Weights (last 14)</h3>
       <ul>${s.weights.map(x => `<li class="row"><span class="row__body">${esc(x.day)}</span>
@@ -1482,9 +2256,11 @@ async function syncPersistUi() {
 const VIEWS = {
   today:    { render: viewToday,    title: 'today.title'    },
   fluid:    { render: viewFluid,    title: 'fluid.title'    },
+  food:     { render: viewFood,     title: 'food.title'     },
   weight:   { render: viewWeight,   title: 'weight.title'   },
   meds:     { render: viewMeds,     title: 'meds.title'     },
   session:  { render: viewSession,  title: 'session.title'  },
+  labs:     { render: viewLabs,     title: 'labs.title'     },
   settings: { render: viewSettings, title: 'settings.title' }
 };
 
@@ -1521,8 +2297,9 @@ function render() {
 function onClick(e) {
   const el = e.target.closest('[data-go],[data-ml],[data-lang],[data-sched],[data-custom-day],[data-theme-set],' +
     '[data-del-intake],[data-del-weight],[data-del-session],[data-empty-action],' +
+    '[data-del-food],[data-add-meal],[data-apply-lab],[data-del-lab],' +
     '[data-toggle-med],[data-edit-med],[data-toggle-chk],[data-del-hdbp],[data-cal-nav],' +
-    '#btnWeigh,#btnSession,#btnSettings,#btnAddMed,#btnLogHdBp,#pSave,#btnPrint,#btnWipe,' +
+    '#btnWeigh,#btnSession,#btnSettings,#btnAddMed,#btnLogHdBp,#btnAddLab,#pSave,#btnPrint,#btnWipe,' +
     '#btnCalibrate,#btnExport,#btnImport,#btnInstall,' +
     '#btnCalSchedule,#btnCalWeigh,#btnCalSessions,#btnCalGoogle');
   if (!el) return;
@@ -1542,6 +2319,15 @@ function onClick(e) {
   if (el.id === 'btnWeigh')  return sheetWeight();
   if (el.id === 'btnSession') return sheetSession();
   if (el.id === 'btnAddMed') return sheetMedication();
+  if (el.id === 'btnAddLab') return sheetLabEntry();
+  if (el.dataset.delLab) {
+    const entry = S.getLabLogs().find(e => e.id === el.dataset.delLab);
+    if (entry) {
+      S.deleteLab(entry.id);
+      toast(t('labs.deleted'), t('common.undo'), () => S.logLab(entry, new Date(entry.ts)));
+    }
+    return;
+  }
   if (el.dataset.toggleMed)  return S.toggleMedicationTaken(el.dataset.toggleMed);
   if (el.dataset.editMed)    return sheetMedication(el.dataset.editMed);
   if (el.dataset.toggleChk)  return S.toggleChecklistItem(el.dataset.toggleChk);
@@ -1594,6 +2380,23 @@ function onClick(e) {
   if (el.dataset.delWeight)  return S.deleteWeight(el.dataset.delWeight);
   if (el.dataset.delSession) return S.deleteSession(el.dataset.delSession);
 
+  if (el.dataset.addMeal)    return sheetFoodPicker(el.dataset.addMeal);
+  if (el.dataset.applyLab) {
+    // Fills the goal input with the lab-based suggestion's midpoint;
+    // the patient/nurse still has to hit the Targets card's own Save
+    // button below to actually persist it — this only sets the field.
+    const targetId = el.dataset.applyLab === 'k' ? '#pK' : '#pPh';
+    const mid = Math.round((Number(el.dataset.lo) + Number(el.dataset.hi)) / 2 / 50) * 50;
+    const targetInput = $(targetId);
+    if (targetInput) { targetInput.value = mid; targetInput.focus(); }
+    return toast(t('settings.labApplied'));
+  }
+  if (el.dataset.delFood) {
+    const entry = S.getFoodLogs().find(e => e.id === el.dataset.delFood);
+    S.deleteFood(entry.id);
+    return toast(t('fluid.removed'), t('common.undo'), () => S.restoreFood(entry));
+  }
+
   if (el.id === 'pSave') {
     const dry   = readNumber($('#pDry'),   { min: 20,  max: 250,  required: false });
     if (dry === null) return $('#pDry').focus();
@@ -1601,7 +2404,20 @@ function onClick(e) {
     if (allow === null) return $('#pAllow').focus();
     const idwg  = readNumber($('#pIdwg'),  { min: 0.5, max: 6,    required: false });
     if (idwg === null) return $('#pIdwg').focus();
-    
+    const kLim  = readNumber($('#pK'),     { min: 500, max: 5000, required: false });
+    if (kLim === null) return $('#pK').focus();
+    const naLim = readNumber($('#pNa'),    { min: 500, max: 5000, required: false });
+    if (naLim === null) return $('#pNa').focus();
+    const phLim = readNumber($('#pPh'),    { min: 300, max: 3000, required: false });
+    if (phLim === null) return $('#pPh').focus();
+    const kcalGoal = readNumber($('#pKcal'), { min: 800, max: 5000, required: false });
+    if (kcalGoal === null) return $('#pKcal').focus();
+    const proteinGoal = readNumber($('#pProtein'), { min: 20, max: 250, required: false });
+    if (proteinGoal === null) return $('#pProtein').focus();
+    const fiberGoal = readNumber($('#pFiber'), { min: 10, max: 60, required: false });
+    if (fiberGoal === null) return $('#pFiber').focus();
+    const autoGoals = $('#pAutoGoals')?.checked ?? true;
+
     const name    = $('#pName')?.value.trim() ?? '';
     const booklet = $('#pBooklet')?.value.trim() ?? '';
     const doctor  = $('#pDoctor')?.value.trim() ?? '';
@@ -1619,6 +2435,13 @@ function onClick(e) {
       dryWeightKg: dry ?? null,
       allowanceMl: allow ?? null,
       idwgLimitKg: idwg ?? 2.0,
+      potassiumLimitMg: kLim ?? 2000,
+      sodiumLimitMg: naLim ?? 2300,
+      phosphorusLimitMg: phLim ?? 900,
+      kcalGoal: kcalGoal ?? 1800,
+      proteinGoalG: proteinGoal ?? 60,
+      fiberGoalG: fiberGoal ?? 30,
+      autoGoalsFromLabs: autoGoals,
       setupDone: true
     });
     return toast(t('settings.saved'));
@@ -1670,6 +2493,22 @@ function boot() {
     }
     if (e.target.id === 'pWeighTime' && e.target.value) {
       return void S.saveProfile({ weighTime: e.target.value });
+    }
+    if (e.target.id === 'pAutoGoals') {
+      // Local-only toggle so the K/phosphorus/protein fields lock or
+      // unlock immediately, without forcing a Save round-trip first to
+      // see the effect. The lab/dry-weight facts behind whether there's
+      // anything to lock to haven't changed, just re-check them against
+      // the box's new state.
+      const p = S.getProfile();
+      const on = e.target.checked;
+      const locks = [
+        ['#pK',       on && !!S.recommendedPotassiumRangeFromLab(p)],
+        ['#pPh',      on && !!S.recommendedPhosphorusRangeFromLab(p)],
+        ['#pProtein', on && !!p.dryWeightKg]
+      ];
+      locks.forEach(([sel, locked]) => { const el = $(sel); if (el) el.disabled = locked; });
+      return;
     }
     if (e.target.id !== 'importFile') return;
     const file = e.target.files?.[0];

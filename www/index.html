@@ -109,6 +109,12 @@
     <path d="M3 11h18a9 9 0 0 1-9 9 9 9 0 0 1-9-9z"/>
     <path d="M9.5 7.5c0-1 1-1.5 1-2.5s-1-1.5-1-2.5M14 7.5c0-1 1-1.5 1-2.5s-1-1.5-1-2.5"/>
   </symbol>
+  <!-- Minimalist single-fork mark for the Food tab — plainer than the
+       bowl glyph the Fluid tab's soup/lugaw tiles already use, so the
+       two tabs don't read as the same icon. -->
+  <symbol id="i-fork" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 2v6M12 2v6M15 2v6M12 8v14"/>
+  </symbol>
   <symbol id="i-ice" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round">
     <rect x="3" y="8" width="10" height="10" rx="2"/>
     <path d="M9 8V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2"/>
@@ -135,6 +141,10 @@
   </symbol>
   <symbol id="i-pill" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round">
     <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/>
+  </symbol>
+  <symbol id="i-flask" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 3h6v8l3.5 6A2 2 0 0 1 16.8 20H7.2a2 2 0 0 1-1.7-3L9 11V3z"/>
+    <path d="M6.5 14.5h11"/>
   </symbol>
 </svg>
 
@@ -181,6 +191,9 @@
     <button type="button" class="nav__item" data-go="fluid">
       <svg aria-hidden="true"><use href="#i-droplet"/></svg><span>Fluid</span>
     </button>
+    <button type="button" class="nav__item" data-go="food">
+      <svg aria-hidden="true"><use href="#i-fork"/></svg><span>Food</span>
+    </button>
     <button type="button" class="nav__item" data-go="weight">
       <svg aria-hidden="true"><use href="#i-scale"/></svg><span>Weight</span>
     </button>
@@ -189,6 +202,9 @@
     </button>
     <button type="button" class="nav__item" data-go="session">
       <svg aria-hidden="true"><use href="#i-activity"/></svg><span>Dialysis</span>
+    </button>
+    <button type="button" class="nav__item" data-go="labs">
+      <svg aria-hidden="true"><use href="#i-flask"/></svg><span>Labs</span>
     </button>
   </nav>
 </div>

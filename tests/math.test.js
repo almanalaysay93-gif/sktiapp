@@ -16,7 +16,8 @@ import { suite, test, eq, near, throws, results, resetResults } from './harness.
    all of them — if one is missing here it is gone for good on a real
    device once the suite finishes, not just during the run. */
 const KEYS = ['skti.v1.profile', 'skti.v1.weights', 'skti.v1.intake', 'skti.v1.sessions',
-              'skti.v1.medications', 'skti.v1.med_logs', 'skti.v1.checklists', 'skti.v1.hd_bp'];
+              'skti.v1.medications', 'skti.v1.med_logs', 'skti.v1.checklists', 'skti.v1.hd_bp',
+              'skti.v1.food_logs'];
 
 function snapshot() {
   return KEYS.map(k => [k, localStorage.getItem(k)]);
@@ -505,6 +506,128 @@ export function runMathTests() {
       eq(p.schedule, 'MWF', 'bad schedule should fall back: ');
       eq(p.lang, 'en', 'unknown language should fall back: ');
       eq(p.evil, undefined, 'unknown key should not survive: ');
+    });
+
+    /* ---------- food log (potassium / sodium) ---------- */
+    suite('food');
+
+    test('logging a food records mg for K, Na and P at the current servings', () => {
+      reset();
+      const e = S.logFood('kanin', 1);   // Rice: K 55, Na 2, P 68 per cup
+      eq(e.kMg, 55);
+      eq(e.naMg, 2);
+      eq(e.phMg, 68);
+    });
+
+    test('servings scale the mineral amounts', () => {
+      reset();
+      const e = S.logFood('kanin', 2);
+      eq(e.kMg, 110);
+      eq(e.naMg, 4);
+    });
+
+    test('an unknown food id logs nothing', () => {
+      reset();
+      eq(S.logFood('not-a-real-food'), null);
+      eq(S.todayFood().length, 0);
+    });
+
+    test('todayFoodTotals sums every entry logged today', () => {
+      reset();
+      S.logFood('kanin', 1);      // K 55,  Na 2
+      S.logFood('tuyo', 1);       // K 200, Na 900
+      const totals = S.todayFoodTotals();
+      eq(totals.k, 255);
+      eq(totals.na, 902);
+    });
+
+    test('a food logged on a past day does not count toward today', () => {
+      reset();
+      S.logFood('tuyo', 1, daysAgo(2));
+      eq(S.todayFoodTotals().k, 0);
+      eq(S.todayFoodTotals().na, 0);
+      eq(S.getFoodLogs().length, 1);
+    });
+
+    test('a liquid food also carries its fluid mL', () => {
+      reset();
+      const e = S.logFood('sabaw', 1);   // 1 cup soup, 240 mL
+      eq(e.ml, 240);
+    });
+
+    test('deleting an entry removes it from today totals', () => {
+      reset();
+      const e = S.logFood('tuyo', 1);
+      S.deleteFood(e.id);
+      eq(S.todayFoodTotals().k, 0);
+    });
+
+    test('restore puts a deleted entry back once', () => {
+      reset();
+      const e = S.logFood('tuyo', 1);
+      S.deleteFood(e.id);
+      S.restoreFood(e);
+      S.restoreFood(e);                     // double undo must not double count
+      eq(S.todayFood().length, 1);
+    });
+
+    /* mineralBand shares the ok/warn/danger grammar of band() above:
+       ok <= 70% of the limit, warn up to it, danger past it. */
+    test('mineralBand: no limit means no band', () => {
+      eq(S.mineralBand(500, 0), null);
+      eq(S.mineralBand(500, null), null);
+    });
+
+    test('mineralBand: under 70% of the limit is ok', () => {
+      eq(S.mineralBand(1000, 2000), 'ok');
+      eq(S.mineralBand(1400, 2000), 'ok');    // exactly 70%
+    });
+
+    test('mineralBand: past 70% flips to warn', () => {
+      eq(S.mineralBand(1401, 2000), 'warn');
+      eq(S.mineralBand(2000, 2000), 'warn');  // exactly at the limit is warn, not danger
+    });
+
+    test('mineralBand: past the limit is danger', () => {
+      eq(S.mineralBand(2001, 2000), 'danger');
+    });
+
+    test('potassiumBand and sodiumBand read off today\'s totals and the saved limits', () => {
+      reset({ potassiumLimitMg: 1000, sodiumLimitMg: 1000 });
+      eq(S.potassiumBand(), 'ok', 'nothing logged yet, zero is within any positive limit: ');
+      S.logFood('gabi', 1);      // Taro: K 640 — 64% of 1000, still ok
+      eq(S.potassiumBand(), 'ok');
+      S.logFood('gabi', 1);      // running total 1280 — past the limit
+      eq(S.potassiumBand(), 'danger');
+    });
+
+    test('food logs are included in a full export and survive a restore round-trip', () => {
+      reset();
+      S.logFood('kanin', 1);
+      S.logFood('tuyo', 2);
+      const dump = JSON.parse(JSON.stringify(S.exportAll()));
+      eq(dump.foodLogs.length, 2);
+      S.wipeAll();
+      eq(S.getFoodLogs().length, 0, 'wipe should clear: ');
+      const counts = S.importAll(dump);
+      eq(counts.foodLogs, 2);
+      eq(S.getFoodLogs().length, 2);
+    });
+
+    test('import drops food entries with a bad day or an impossible amount', () => {
+      reset();
+      const counts = S.importAll({
+        app: 'sktidvo', version: 1,
+        profile: {}, weights: [], intake: [], sessions: [],
+        foodLogs: [
+          { day: '2026-07-27', name: 'Rice', kMg: 55, naMg: 2 },        // good
+          { day: 'not-a-date', name: 'Rice', kMg: 55, naMg: 2 },        // bad day
+          { day: '2026-07-27', name: '', kMg: 55, naMg: 2 },            // no name
+          { day: '2026-07-27', name: 'Bad', kMg: -5, naMg: 2 },         // negative
+          { day: '2026-07-27', name: 'Bad', kMg: 55, naMg: 99999 }      // impossible
+        ]
+      });
+      eq(counts.foodLogs, 1);
     });
 
   } finally {
